@@ -26,13 +26,13 @@
 <meta property="og:site_name" content="Welcome to my blog!">
 <meta property="og:description" content="HNSW 层次化可导航的小世界背景就不一一解释了， 主要是为了解决相似性查找的问题。 相关概念介绍1. Proximity GraphProximity Graph 的主要思想是，随机选取一个开始节点， 从这个节点开始搜索它的邻居，找到邻居中和目标节点距离最近的一个， 再以这个邻居开始进行下一轮迭代。 思路很简单的同时，存在着非常多的问题，最为关键的就是搜索复杂度无法确定，孤岛效应难以解决，以及构">
 <meta property="og:locale" content="zh_CN">
-<meta property="og:image" content="http://example.com/HNSW%E8%AE%BA%E6%96%87%E7%AC%94%E8%AE%B0/layersearch.png#pic_center">
+<meta property="og:image" content="http://example.com/HNSW%E8%AE%BA%E6%96%87%E7%AC%94%E8%AE%B0/layersearch.png">
 <meta property="article:published_time" content="2025-05-11T12:51:10.000Z">
-<meta property="article:modified_time" content="2025-05-12T14:06:54.988Z">
+<meta property="article:modified_time" content="2025-05-13T02:44:00.498Z">
 <meta property="article:author" content="Soya">
 <meta property="article:tag" content="DataBase">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:image" content="http://example.com/HNSW%E8%AE%BA%E6%96%87%E7%AC%94%E8%AE%B0/layersearch.png#pic_center">
+<meta name="twitter:image" content="http://example.com/HNSW%E8%AE%BA%E6%96%87%E7%AC%94%E8%AE%B0/layersearch.png">
   
   
   
@@ -308,7 +308,7 @@
 <p>文章反复提到的对数多项式复杂度实际上是:<br>$$a_{k}log^{k}(n)+…+a_1log(n)+a_0$$</p>
 </blockquote>
 <h3 id="HNSW算法"><a href="#HNSW算法" class="headerlink" title="HNSW算法"></a>HNSW算法</h3><p>NSW中单个贪心搜索的多对数复杂性的原因在于，总的距离计算次数大致与贪心算法跳转的平均次数与贪心路径上节点的平均度数的乘积成正比。</p>
-<p>HNSW的主要思想是根据节点之间连接的长度尺度将图分为不同的层，然后再多层图中进行搜索。<br><img src="/./HNSW%E8%AE%BA%E6%96%87%E7%AC%94%E8%AE%B0/layersearch.png#pic_center" srcset="/img/loading.gif" lazyload><br>自图中的红色节点开始，利用贪心算法搜索和它距离最近的一个节点，然后逐层搜索直至搜索到最下层。</p>
+<p>HNSW的主要思想是根据节点之间连接的长度尺度将图分为不同的层，然后再多层图中进行搜索。<br><img src="/HNSW%E8%AE%BA%E6%96%87%E7%AC%94%E8%AE%B0/layersearch.png" srcset="/img/loading.gif" lazyload><br>自图中的红色节点开始，利用贪心算法搜索和它距离最近的一个节点，然后逐层搜索直至搜索到最下层。</p>
 
                 
               </div>
@@ -434,6 +434,12 @@
 
 
   
+
+
+  
+  
+
+
 
 
 
@@ -652,6 +658,49 @@
 
 
   <script>Fluid.plugins.imageCaption();</script>
+
+  
+      <script>
+        if (!window.MathJax) {
+          window.MathJax = {
+            tex    : {
+              inlineMath: { '[+]': [['$', '$']] }
+            },
+            loader : {
+              load: ['ui/lazy']
+            },
+            options: {
+              renderActions: {
+                insertedScript: [200, () => {
+                  document.querySelectorAll('mjx-container').forEach(node => {
+                    let target = node.parentNode;
+                    if (target.nodeName.toLowerCase() === 'li') {
+                      target.parentNode.classList.add('has-jax');
+                    }
+                  });
+                }, '', false]
+              }
+            }
+          };
+        } else {
+          MathJax.startup.document.state(0);
+          MathJax.texReset();
+          MathJax.typeset();
+          MathJax.typesetPromise();
+        }
+
+        Fluid.events.registerRefreshCallback(function() {
+          if ('MathJax' in window && MathJax.startup.document && typeof MathJax.startup.document.state === 'function') {
+            MathJax.startup.document.state(0);
+            MathJax.texReset();
+            MathJax.typeset();
+            MathJax.typesetPromise();
+          }
+        });
+      </script>
+    
+
+  <script  src="https://lib.baomitu.com/mathjax/3.2.2/es5/tex-mml-chtml.js" ></script>
 
   <script defer src="/js/leancloud.js" ></script>
 
