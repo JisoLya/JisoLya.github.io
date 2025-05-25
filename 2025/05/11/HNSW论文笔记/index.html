@@ -29,7 +29,7 @@
 <meta property="og:image" content="http://example.com/2025/05/11/HNSW%E8%AE%BA%E6%96%87%E7%AC%94%E8%AE%B0/layersearch.png">
 <meta property="og:image" content="http://example.com/2025/05/11/HNSW%E8%AE%BA%E6%96%87%E7%AC%94%E8%AE%B0/insertion.png">
 <meta property="article:published_time" content="2025-05-11T12:51:10.000Z">
-<meta property="article:modified_time" content="2025-05-24T14:04:21.904Z">
+<meta property="article:modified_time" content="2025-05-25T14:41:58.132Z">
 <meta property="article:author" content="Soya">
 <meta property="article:tag" content="DataBase">
 <meta name="twitter:card" content="summary_large_image">
@@ -239,7 +239,7 @@
       <span class="post-meta mr-2">
         <i class="iconfont icon-chart"></i>
         
-          837 字
+          1.1k 字
         
       </span>
     
@@ -250,7 +250,7 @@
         
         
         
-          7 分钟
+          10 分钟
         
       </span>
     
@@ -317,6 +317,18 @@
 <p>最近忙着landing，今天正好周末了，更新一下笔记吧~  2025.5.24</p>
 <p>论文中提到，层与层之间的连接可以被设置为某一个常量。一种构造这种层次结构的措施是：对于图中的每一个节点，我们可以分配一个整型数字l，表示这个节点所在的层数。同时，如果我们设置一种有关l的指数衰减的概率，那么每一层的节点数大致就是以 <code>2 -&gt; 4 -&gt; 8</code>指数的形式来增长的，保证了算法的搜索效率(类似与跳表)。</p>
 <p>与NSW不同的是，在节点插入之前，节点不需要被打乱，HNSW的随机性由随机的layer来实现。在节点插入的时候，采用了一种启发式的方法，考虑到所有节点之间的距离而不是仅仅选择距离最近的一个节点。<br><img src="insertion.png" srcset="/img/loading.gif" lazyload alt="图2. 插入节点的表示"><br>在图2中，如果插入的节点在Cluster 1的范围中，如果选取距离最近的一个节点来建立连接，那么会破环整个图结构的连接性，文章中说到的启发式的方法将这种情况也考虑到，这样整个图仍旧是一个<em>Delaunay graph</em>，同时防止插入节点与$e_2$的距离要小于Cluster 1中节点距离的情况。</p>
+<blockquote>
+<p><strong>Algorithm 1</strong><br>图的构建过程是由连续的将候选元素插入到图中实现的：<br>INSERT(hnsw, q, M, Mmax, efConstruction, mL)<br>输入参数说明：</p>
+<ol>
+<li>层次图 $hnsw$</li>
+<li>新插入的元素$q$</li>
+<li>已有的连接数$M$</li>
+<li>每层每个元素的最大连接数$M_{max}$</li>
+<li>动态候选元素的列表大小 $efConstruction$</li>
+<li>用于层级生成的归一化因子$m_L$</li>
+</ol>
+<p>输出：更新后的$hnsw$<br>算法流程：<br>1  $W \leftarrow Ø$ &#x2F;&#x2F; 当前发现最邻近的节点列表<br>2  $ep \leftarrow hnsw 的入口节点$<br>3  $L \leftarrow 入口节点的层级$ &#x2F;&#x2F; $hnsw$的最高层<br>4  $l \leftarrow [-ln(uniform(0..1))·m_l]$ &#x2F;&#x2F; 新节点的层级<br>5  $for \space l_c  \leftarrow L … l+1:$<br>6  $\quad W \leftarrow SEARCHLAYER(q, ep, ef&#x3D;1, l_c)$ &#x2F;&#x2F; searchlayer是Algorithm 2<br>7  $\quad ep \leftarrow$ 从$W$中获取距离$q$最近的节点<br>8  $end \space for$<br>9  $for\space l_c \leftarrow min(L,l)… 0:$<br>10 $\quad W \leftarrow SEARCHLAYER(q, ep, efConstruction, l_c)$<br>11 $\quad neighbors \leftarrow SELECTNEIGHBORS(q, W, M, l_c)$&#x2F;&#x2F; Algorithm 3 或Algorithm 4<br>12 $\quad$ 添加从q到neighbors的双向连接<br>13 $\quad for \space each\space e \in neighbors:$<br>14 $\quad \quad eConn\leftarrow neighbourhood(e) \space (l_c层)$<br>15 $\quad \quad if \space |eConn| &gt; M_max:$<br>16 $\quad \quad \quad  eNewConn \leftarrow SELECTNEIGHBORS(e, eConn,  M_max, l_c)$<br>17 $\quad \quad \quad 将l_c这一层的neighbor(e)设置为 eNewConn$<br>18 $\quad \quad end \space if$<br>19 $\quad \quad ep \leftarrow W$<br>20 $\quad end \space for$<br>21 $if \space l &gt; L$<br>22 $\quad 将hnsw的入口设置为q$<br>23 $end\space if$</p>
+</blockquote>
 
                 
               </div>
