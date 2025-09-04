@@ -45,7 +45,7 @@
 <meta property="og:image" content="http://example.com/2025/09/04/%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F/debug14.png">
 <meta property="og:image" content="http://example.com/2025/09/04/%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F/res.png">
 <meta property="article:published_time" content="2025-09-04T08:53:00.000Z">
-<meta property="article:modified_time" content="2025-09-04T11:23:19.112Z">
+<meta property="article:modified_time" content="2025-09-04T11:31:05.542Z">
 <meta property="article:author" content="Soya">
 <meta property="article:tag" content="DesignPattern">
 <meta name="twitter:card" content="summary_large_image">
@@ -337,6 +337,7 @@
 <p>不过我们没有把自己的类定义成Bean，所以还用不了<code>@Autowired</code>，可以直接通过ApplicationContext来获取，贴一小部分代码</p>
 <figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><code class="hljs java">	<span class="hljs-keyword">private</span> <span class="hljs-keyword">void</span> <span class="hljs-title function_">setupProcessor</span><span class="hljs-params">()</span> &#123;<br>		<span class="hljs-keyword">if</span> (processor != <span class="hljs-literal">null</span>) &#123;<br>			<span class="hljs-keyword">return</span>;<br>		&#125;<br>		<span class="hljs-type">RequestMappingHandlerAdapter</span> <span class="hljs-variable">adapter</span> <span class="hljs-operator">=</span> <span class="hljs-built_in">this</span>.applicationContext.getBean(RequestMappingHandlerAdapter.class);<br>		<span class="hljs-keyword">for</span> (HandlerMethodArgumentResolver resolver : adapter.getArgumentResolvers()) &#123;<br>			<span class="hljs-keyword">if</span> (resolver <span class="hljs-keyword">instanceof</span> RequestResponseBodyMethodProcessor) &#123;<br>				processor = resolver;<br>			&#125;<br>		&#125;<br>	&#125;<br>&#125;<br></code></pre></td></tr></table></figure>
 <p>至此，我们的目标就完成了，结果如下图<br><img src="res.png" srcset="/img/loading.gif" lazyload></p>
+<p>代码链接: <a target="_blank" rel="noopener" href="https://github.com/JisoLya/DesignPattern/tree/master/WrapperSpringBoot">https://github.com/JisoLya/DesignPattern/tree/master/WrapperSpringBoot</a></p>
 
                 
               </div>
