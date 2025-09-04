@@ -44,7 +44,7 @@
 <meta property="og:image" content="http://example.com/.com//debug14.png">
 <meta property="og:image" content="http://example.com/.com//res.png">
 <meta property="article:published_time" content="2025-09-04T08:53:00.000Z">
-<meta property="article:modified_time" content="2025-09-04T12:26:44.064Z">
+<meta property="article:modified_time" content="2025-09-04T12:32:00.577Z">
 <meta property="article:author" content="Soya">
 <meta property="article:tag" content="DesignPattern">
 <meta name="twitter:card" content="summary_large_image">
@@ -317,8 +317,9 @@
               <div class="markdown-body">
                 
                 <h1 id="装饰器模式"><a href="#装饰器模式" class="headerlink" title="装饰器模式"></a>装饰器模式</h1><p>简单的来说，就是为某一个类&#x2F;对象增加一些额外的功能，类似于Spring的AOP，执行方法增强。</p>
-<h2 id="Topic"><a href="#Topic" class="headerlink" title="Topic"></a>Topic</h2><p>目标：学习装饰器模式<br>课题：<br>实现这样一个功能，在接收到post请求之后，为map添加一个<code>timestamp</code>字段，值为当前的时间戳(不依赖Spring的AOP)。</p>
-<h3 id="分析"><a href="#分析" class="headerlink" title="分析"></a>分析</h3><p>为了实现这个装饰器，我们首先需要知道这里的map是怎么获取到的，这里直接打一个断点进入堆栈，对接口发送图中的请求。<br><img src="/.com//request.png" srcset="/img/loading.gif" lazyload><br>在接口收到请求之后，我们很容易就可以定位到这个方法，进入这个方法中，发现有<code>getMethodArgumentValues</code>这个方法的调用。<br><img src="/.com//debug0.png" srcset="/img/loading.gif" lazyload></p>
+<h2 id="Topic"><a href="#Topic" class="headerlink" title="Topic"></a>Topic</h2><p>目标：学习装饰器模式<br>课题：<br><img src="/.com//request.png" srcset="/img/loading.gif" lazyload><br>实现这样一个功能，在接收到post请求之后，为map添加一个<code>timestamp</code>字段，值为当前的时间戳(不依赖Spring的AOP)。</p>
+<h3 id="分析"><a href="#分析" class="headerlink" title="分析"></a>分析</h3><p>为了实现这个装饰器，我们首先需要知道这里的map是怎么获取到的，这里直接打一个断点进入堆栈，对接口发送图中的请求。</p>
+<p>在接口收到请求之后，我们很容易就可以定位到这个方法，进入这个方法中，发现有<code>getMethodArgumentValues</code>这个方法的调用。<br><img src="/.com//debug0.png" srcset="/img/loading.gif" lazyload></p>
 <p>点进这个方法，看到这个方法中关于<code>args</code>的赋值逻辑:交给<code>resolver.resolveArgument()</code>进行处理，那么这个真正的逻辑就藏在<code>resolver</code>中。<br><img src="/.com//debug1.png" srcset="/img/loading.gif" lazyload><br>接着去看<code>resolvers</code>都是什么？ (<code>HandlerMethodArgumentResolverComposite</code>)<br><img src="/.com//debug2.png" srcset="/img/loading.gif" lazyload><br>同时如果不加配置的情况下，<code>resolvers</code>的size应该是27个(这里就不截图了)。因此可以确定，我们如果想实现目标，需要添加一个自定义的resolver或者是对某一个resolver进行增强，也就符合装饰器模式的定义，也就需要再看看Spring是什么时候添加这些resolver的，点进去这个<code>HandlerMethodArgumentResolverComposite</code>给这几个<code>addResolver()</code>打上断点，再看看调用堆栈。<br><img src="/.com//debug3.png" srcset="/img/loading.gif" lazyload><br>很容易定位到下边这些个箭头的方法~，这个<code>getDefaultArgumentResolvers</code>是一坨巨大的石山(一个个new出来然后再add)。<br><img src="/.com//debug4.png" srcset="/img/loading.gif" lazyload></p>
 <p>接着再回来，这里的<code>HandlerMethodArgumentResolverComposite</code>也是一种装饰器模式的实现，即它本身是一个<code>...resolver</code>，里边又塞了一个<code>resolver</code>的list，在实际执行resolve方法的时候，他先获取支持当前param的resolver再丢给对应的resolver进行处理。<br><img src="/.com//debug5.png" srcset="/img/loading.gif" lazyload><br><img src="/.com//debug6.png" srcset="/img/loading.gif" lazyload></p>
 <p>那么带有<code>@RequestBody</code>注解的param是通过哪一个<code>resolver</code>进行处理的，答案是<code>RequestResponseBodyMethodProcessor</code>，这时就比较简单了，我们需要查看一下这个resolver是怎么进行supportArgument的,再自定义一个resolver进行增强。<br><img src="/.com//debug7.png" srcset="/img/loading.gif" lazyload></p>
