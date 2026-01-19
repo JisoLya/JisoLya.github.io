@@ -22,19 +22,19 @@
     <meta name="description" content="GPT2&#x2F;Qwen2 模型架构Transformer在介绍GPT2与Qwen2的模型架构前，首先需要简单的回顾一下Transformer架构，这里就默认读者已经基本了解Transformer了，贴出一个图。 左侧是Encoder部分而右侧是Decoder部分。至于为什么需要将Encoder的输出输入到Decoder当中，以一个机器翻译任务举例。我爱你 -&gt; I love you 首">
 <meta property="og:type" content="article">
 <meta property="og:title" content="Qwen&amp;GPT2模型架构">
-<meta property="og:url" content="http://example.com/2026/01/19/Qwen&GPT2%E6%A8%A1%E5%9E%8B%E6%9E%B6%E6%9E%84/index.html">
+<meta property="og:url" content="http://example.com/2026/01/19/Qwen-GPT2%E6%A8%A1%E5%9E%8B%E6%9E%B6%E6%9E%84/index.html">
 <meta property="og:site_name" content="Welcome to my blog!">
 <meta property="og:description" content="GPT2&#x2F;Qwen2 模型架构Transformer在介绍GPT2与Qwen2的模型架构前，首先需要简单的回顾一下Transformer架构，这里就默认读者已经基本了解Transformer了，贴出一个图。 左侧是Encoder部分而右侧是Decoder部分。至于为什么需要将Encoder的输出输入到Decoder当中，以一个机器翻译任务举例。我爱你 -&gt; I love you 首">
 <meta property="og:locale" content="zh_CN">
-<meta property="og:image" content="http://example.com/2026/01/19/Qwen&GPT2%E6%A8%A1%E5%9E%8B%E6%9E%B6%E6%9E%84/transformer.png">
-<meta property="og:image" content="http://example.com/2026/01/19/Qwen&GPT2%E6%A8%A1%E5%9E%8B%E6%9E%B6%E6%9E%84/DecoderOnly.png">
-<meta property="og:image" content="http://example.com/2026/01/19/Qwen&GPT2%E6%A8%A1%E5%9E%8B%E6%9E%B6%E6%9E%84/model_para.png">
+<meta property="og:image" content="http://example.com/2026/01/19/Qwen-GPT2%E6%A8%A1%E5%9E%8B%E6%9E%B6%E6%9E%84/transformer.png">
+<meta property="og:image" content="http://example.com/2026/01/19/Qwen-GPT2%E6%A8%A1%E5%9E%8B%E6%9E%B6%E6%9E%84/DecoderOnly.png">
+<meta property="og:image" content="http://example.com/2026/01/19/Qwen-GPT2%E6%A8%A1%E5%9E%8B%E6%9E%B6%E6%9E%84/model_para.png">
 <meta property="article:published_time" content="2026-01-19T10:09:00.000Z">
 <meta property="article:modified_time" content="2026-01-19T09:03:44.537Z">
 <meta property="article:author" content="Soya">
 <meta property="article:tag" content="Transformer">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:image" content="http://example.com/2026/01/19/Qwen&GPT2%E6%A8%A1%E5%9E%8B%E6%9E%B6%E6%9E%84/transformer.png">
+<meta name="twitter:image" content="http://example.com/2026/01/19/Qwen-GPT2%E6%A8%A1%E5%9E%8B%E6%9E%B6%E6%9E%84/transformer.png">
   
   
   
@@ -302,7 +302,7 @@
             
               <div class="markdown-body">
                 
-                <h1 id="GPT2-Qwen2-模型架构"><a href="#GPT2-Qwen2-模型架构" class="headerlink" title="GPT2&#x2F;Qwen2 模型架构"></a>GPT2&#x2F;Qwen2 模型架构</h1><h2 id="Transformer"><a href="#Transformer" class="headerlink" title="Transformer"></a>Transformer</h2><p>在介绍GPT2与Qwen2的模型架构前，首先需要简单的回顾一下Transformer架构，这里就默认读者已经基本了解Transformer了，贴出一个图。<br><img src="/2026/01/19/Qwen&GPT2%E6%A8%A1%E5%9E%8B%E6%9E%B6%E6%9E%84/transformer.png" srcset="/img/loading.gif" lazyload alt="Transformer"></p>
+                <h1 id="GPT2-Qwen2-模型架构"><a href="#GPT2-Qwen2-模型架构" class="headerlink" title="GPT2&#x2F;Qwen2 模型架构"></a>GPT2&#x2F;Qwen2 模型架构</h1><h2 id="Transformer"><a href="#Transformer" class="headerlink" title="Transformer"></a>Transformer</h2><p>在介绍GPT2与Qwen2的模型架构前，首先需要简单的回顾一下Transformer架构，这里就默认读者已经基本了解Transformer了，贴出一个图。<br><img src="/2026/01/19/Qwen-GPT2%E6%A8%A1%E5%9E%8B%E6%9E%B6%E6%9E%84/transformer.png" srcset="/img/loading.gif" lazyload alt="Transformer"></p>
 <p>左侧是Encoder部分而右侧是Decoder部分。至于为什么需要将Encoder的输出输入到Decoder当中，以一个机器翻译任务举例。我爱你 -&gt; I love you</p>
 <p>首先Encoder的输入为原始的词嵌入，位置编码信息，这部分在另一篇文档中给出了。至于为什么是mask-MultiHead att：在Encoder中我们需要把不同batch(也就是不同的句子集合)都padding为相同的长度，这样适合于向量化运算，所以计算self-att的时候需要把padding的部分mask掉(因为句子这里本身是没有任何消息的)。至于在Bert（Masked Language Modeling - MLM）预训练过程中，他们更类似于做”完形填空”，mask是用来挖空的。</p>
 <blockquote>
@@ -317,9 +317,9 @@
 </blockquote>
 <p>另一点是计算注意力分数的时候同样是Masked Att， 这里mask是为了保证在训练的时候保证<strong>因果性</strong>, Decoder属于是预测下一个词，如果提前把下一个词告诉他那么这个预测就没有意义了。</p>
 <h2 id="GPT2-GPT3模型结构"><a href="#GPT2-GPT3模型结构" class="headerlink" title="GPT2&#x2F;GPT3模型结构"></a>GPT2&#x2F;GPT3模型结构</h2><p>GPT系列使用了Transformer的Decoder架构，他是Decoder-only的模型，相较于原始的transformer，他去掉了中间的Cross-att模块，并经过多次堆叠，大概示例如下:</p>
-<p><img src="/2026/01/19/Qwen&GPT2%E6%A8%A1%E5%9E%8B%E6%9E%B6%E6%9E%84/DecoderOnly.png" srcset="/img/loading.gif" lazyload alt="去掉的Cross-Att模块"></p>
+<p><img src="/2026/01/19/Qwen-GPT2%E6%A8%A1%E5%9E%8B%E6%9E%B6%E6%9E%84/DecoderOnly.png" srcset="/img/loading.gif" lazyload alt="去掉的Cross-Att模块"></p>
 <figure class="highlight gherkin"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><code class="hljs gherkin">[Input]<br>   |<span class="hljs-string"></span><br><span class="hljs-string">[Token Emb] + [Positional Emb (可学习的)]</span><br><span class="hljs-string">   </span>|<br>   |<span class="hljs-string">--- (堆叠 N 层 Block) ---</span><br><span class="hljs-string">   </span>|<span class="hljs-string">  [Block i]</span><br><span class="hljs-string">   </span>|<span class="hljs-string">     </span>|<br>   |<span class="hljs-string">  [Layer Norm]  &lt;-- Pre-Norm</span><br><span class="hljs-string">   </span>|<span class="hljs-string">     </span>|<br>   |<span class="hljs-string">  [Masked Self-Attention]</span><br><span class="hljs-string">   </span>|<span class="hljs-string">     </span>|<br>   |<span class="hljs-string">  [Add] (残差连接直接连到 Norm 之前)</span><br><span class="hljs-string">   </span>|<span class="hljs-string">     </span>|<br>   |<span class="hljs-string">  [Layer Norm]</span><br><span class="hljs-string">   </span>|<span class="hljs-string">     </span>|<br>   |<span class="hljs-string">  [FFN]</span><br><span class="hljs-string">   </span>|<span class="hljs-string">     </span>|<br>   |<span class="hljs-string">  [Add]</span><br><span class="hljs-string">   </span>|<span class="hljs-string">-------------------------</span><br><span class="hljs-string">   </span>|<br>[Layer Norm] (最后的归一化)<br>   |<span class="hljs-string"></span><br><span class="hljs-string">[Linear Projection] (映射回词表大小)</span><br><span class="hljs-string">   </span>|<br>[Softmax]<br></code></pre></td></tr></table></figure>
-<p>另外他还把归一化提前到了att层前，曾经是post-norm，现在采用了pre-norm。下边是一些模型的参数：<br><img src="/2026/01/19/Qwen&GPT2%E6%A8%A1%E5%9E%8B%E6%9E%B6%E6%9E%84/model_para.png" srcset="/img/loading.gif" lazyload alt="alt text"></p>
+<p>另外他还把归一化提前到了att层前，曾经是post-norm，现在采用了pre-norm。下边是一些模型的参数：<br><img src="/2026/01/19/Qwen-GPT2%E6%A8%A1%E5%9E%8B%E6%9E%B6%E6%9E%84/model_para.png" srcset="/img/loading.gif" lazyload alt="alt text"></p>
 <p>至于GPT3， 他是GPT2堆料的版本，但是采用了新的Sparse-Att技术，因为原有的注意力机制每个单词需要查看他之前所有的单词来获取注意力分数，这个时间复杂度是O(N^2)的，导致显存爆炸。这里的Sparse-Att是有策略地计算注意力分数而不是全局计算。</p>
 <p>GPT3还提出了一个概念叫做In-Context-Learning， 我认为这和现在的提示词&#x2F;上下文工程很相似，本质上是因为LLM在训练的过程中有过这样的训练样本，类似与 “问题， 答案”这样的。所以在模型中加入一些Context可以有效地提升模型回答的准确率。</p>
 <h2 id="Qwen模型架构"><a href="#Qwen模型架构" class="headerlink" title="Qwen模型架构"></a>Qwen模型架构</h2><p>这部分过两天再更新~</p>
@@ -348,7 +348,7 @@
   <div class="license-box my-3">
     <div class="license-title">
       <div>Qwen&amp;GPT2模型架构</div>
-      <div>http://example.com/2026/01/19/Qwen&amp;GPT2模型架构/</div>
+      <div>http://example.com/2026/01/19/Qwen-GPT2模型架构/</div>
     </div>
     <div class="license-meta">
       
