@@ -1,0 +1,790 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=auto>
+
+
+
+<head>
+  <meta charset="UTF-8">
+
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/fluid.png">
+  <link rel="icon" href="/img/fluid.png">
+  
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="author" content="Soya">
+  <meta name="keywords" content="">
+  
+    <meta name="description" content="CUDA共享内存SM(Streaming Multiprocessors)与板块(block)在先前我们利用网格跨步循环实现了数组的加法，但是其中利用了atomicAdd()这样的原子化操作导致实际上每一个线程都是串行化进行了，并不能发挥GPU的并行计算能力。 如果不使用原子计算的方式，我们就要将sum变为数组，下边的这段代码每一个线程计算一段地址0-1023， 1024-2045 …，将求和的大">
+<meta property="og:type" content="article">
+<meta property="og:title" content="CUDA共享内存">
+<meta property="og:url" content="http://example.com/2026/01/18/cuda%E5%85%B1%E4%BA%AB%E5%86%85%E5%AD%98/index.html">
+<meta property="og:site_name" content="Welcome to my blog!">
+<meta property="og:description" content="CUDA共享内存SM(Streaming Multiprocessors)与板块(block)在先前我们利用网格跨步循环实现了数组的加法，但是其中利用了atomicAdd()这样的原子化操作导致实际上每一个线程都是串行化进行了，并不能发挥GPU的并行计算能力。 如果不使用原子计算的方式，我们就要将sum变为数组，下边的这段代码每一个线程计算一段地址0-1023， 1024-2045 …，将求和的大">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2026-01-18T12:51:10.000Z">
+<meta property="article:modified_time" content="2026-01-19T06:04:22.542Z">
+<meta property="article:author" content="Soya">
+<meta property="article:tag" content="CUDA">
+<meta name="twitter:card" content="summary_large_image">
+  
+  
+  
+  <title>CUDA共享内存 - Welcome to my blog!</title>
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
+
+
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/github-markdown-css/4.0.0/github-markdown.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/hint.css/2.7.0/hint.min.css" />
+
+  <link  rel="stylesheet" href="https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+<!-- Do not modify the link that theme dependent icons -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1749284_5i9bdhy70f8.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/c/font_1736178_k526ubmyhba.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+
+  <link id="highlight-css" rel="stylesheet" href="/css/highlight.css" />
+  
+    <link id="highlight-css-dark" rel="stylesheet" href="/css/highlight-dark.css" />
+  
+
+
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    Fluid.ctx = Object.assign({}, Fluid.ctx)
+    var CONFIG = {"hostname":"example.com","root":"/","version":"1.9.8","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":false,"scope":[]},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"left","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"code_language":{"enable":true,"default":"TEXT"},"copy_btn":true,"image_caption":{"enable":true},"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"placement":"right","headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":true,"follow_dnt":false,"baidu":null,"google":{"measurement_id":null},"tencent":{"sid":null,"cid":null},"leancloud":{"app_id":"wq3nmkkKDYqHcdZfICdoI8H8-gzGzoHsz","app_key":"fXqYKinNKjQ3b45F2Be33lU9","server_url":"https://wq3nmkkk.lc-cn-n1-shared.com","path":"window.location.pathname","ignore_local":false},"umami":{"src":null,"website_id":null,"domains":null,"start_time":"2024-01-01T00:00:00.000Z","token":null,"api_server":null}},"search_path":"/local-search.xml","include_content_in_search":true};
+
+    if (CONFIG.web_analytics.follow_dnt) {
+      var dntVal = navigator.doNotTrack || window.doNotTrack || navigator.msDoNotTrack;
+      Fluid.ctx.dnt = dntVal && (dntVal.startsWith('1') || dntVal.startsWith('yes') || dntVal.startsWith('on'));
+    }
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+  
+
+
+
+  
+<meta name="generator" content="Hexo 7.3.0"></head>
+
+
+<body>
+  
+
+  <header>
+    
+
+<div class="header-inner" style="height: 70vh;">
+  <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <strong>Soyan</strong>
+    </a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/" target="_self">
+                <i class="iconfont icon-home-fill"></i>
+                <span>首页</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/" target="_self">
+                <i class="iconfont icon-archive-fill"></i>
+                <span>归档</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/" target="_self">
+                <i class="iconfont icon-category-fill"></i>
+                <span>分类</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/" target="_self">
+                <i class="iconfont icon-tags-fill"></i>
+                <span>标签</span>
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/" target="_self">
+                <i class="iconfont icon-user-fill"></i>
+                <span>关于</span>
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" href="javascript:;" data-toggle="modal" data-target="#modalSearch" aria-label="Search">
+              <i class="iconfont icon-search"></i>
+            </a>
+          </li>
+          
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self" href="javascript:;" aria-label="Color Toggle">
+              <i class="iconfont icon-dark" id="color-toggle-icon"></i>
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+  
+
+<div id="banner" class="banner" parallax=true
+     style="background: url('/img/default.png') no-repeat center center; background-size: cover;">
+  <div class="full-bg-img">
+    <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+      <div class="banner-text text-center fade-in-up">
+        <div class="h2">
+          
+            <span id="subtitle" data-typed-text="CUDA共享内存"></span>
+          
+        </div>
+
+        
+          
+  <div class="mt-3">
+    
+    
+      <span class="post-meta">
+        <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+        <time datetime="2026-01-18 20:51" pubdate>
+          2026年1月18日 晚上
+        </time>
+      </span>
+    
+  </div>
+
+  <div class="mt-1">
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-chart"></i>
+        
+          2.9k 字
+        
+      </span>
+    
+
+    
+      <span class="post-meta mr-2">
+        <i class="iconfont icon-clock-fill"></i>
+        
+        
+        
+          25 分钟
+        
+      </span>
+    
+
+    
+    
+      
+        <span id="leancloud-page-views-container" class="post-meta" style="display: none">
+          <i class="iconfont icon-eye" aria-hidden="true"></i>
+          <span id="leancloud-page-views"></span> 次
+        </span>
+        
+      
+      
+    
+  </div>
+
+
+        
+      </div>
+
+      
+    </div>
+  </div>
+</div>
+
+</div>
+
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+
+    </div>
+
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div id="board">
+          <article class="post-content mx-auto">
+            <h1 id="seo-header">CUDA共享内存</h1>
+            
+            
+              <div class="markdown-body">
+                
+                <h1 id="CUDA共享内存"><a href="#CUDA共享内存" class="headerlink" title="CUDA共享内存"></a>CUDA共享内存</h1><h2 id="SM-Streaming-Multiprocessors-与板块-block"><a href="#SM-Streaming-Multiprocessors-与板块-block" class="headerlink" title="SM(Streaming Multiprocessors)与板块(block)"></a>SM(Streaming Multiprocessors)与板块(block)</h2><p>在先前我们利用网格跨步循环实现了数组的加法，但是其中利用了<code>atomicAdd()</code>这样的原子化操作导致实际上每一个线程都是串行化进行了，并不能发挥GPU的并行计算能力。</p>
+<p>如果不使用原子计算的方式，我们就要将sum变为数组，下边的这段代码每一个线程计算一段地址0-1023， 1024-2045 …，将求和的大小缩减到CPU可接受的范围，最后在CPU上进行求和。</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><code class="hljs cpp"><span class="hljs-function">__global <span class="hljs-type">void</span> <span class="hljs-title">parallel_sum</span><span class="hljs-params">(<span class="hljs-type">int</span>* sum, <span class="hljs-type">int</span> <span class="hljs-type">const</span>* arr, <span class="hljs-type">int</span> n)</span></span>&#123;<br>    <span class="hljs-keyword">for</span>(<span class="hljs-type">int</span> i = blockIdx.x * blockDim.x + threadIdx.x;i &lt; n / <span class="hljs-number">1024</span> ;i += blockDim.x * gridDim.x)&#123;<br>        <span class="hljs-type">int</span> local_sum = <span class="hljs-number">0</span>;<br>        <span class="hljs-keyword">for</span> (<span class="hljs-type">int</span> j = i * <span class="hljs-number">1024</span>; j &lt; i * <span class="hljs-number">1024</span> + <span class="hljs-number">1024</span>;j++)&#123;<br>            local_sum += arr[j];<br>        &#125;<br>        sum[i] = local_sum;<br>    &#125;<br>&#125;<br></code></pre></td></tr></table></figure>
+
+<p>这种求和的内存访问有很大的缺点，每个线程内部仍旧是串行化的：</p>
+<ul>
+<li>线程0依次访问arr[0], arr[1]…</li>
+<li>线程1依次访问arr[1024], arr[1025]…</li>
+</ul>
+<p>在上述的方式里，<code>local_sum</code>对前一时刻是有依赖关系的，去除依赖关系是提升效率的关键。</p>
+<blockquote>
+<p>利用线程局部数组来并行化处理</p>
+</blockquote>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br></pre></td><td class="code"><pre><code class="hljs cpp"><span class="hljs-function">__global__ <span class="hljs-type">void</span> <span class="hljs-title">parallel_sum</span><span class="hljs-params">(<span class="hljs-type">int</span>* sum, <span class="hljs-type">int</span> <span class="hljs-type">const</span>*  arr, <span class="hljs-type">int</span> n)</span></span>&#123;<br>    <span class="hljs-keyword">for</span>(<span class="hljs-type">int</span> i = threadIdx.x + blockDim.x * blockIdx.x;<br>    i &lt; n / <span class="hljs-number">1024</span>; i += blockDim.x * gridDim.x)&#123;<br>        <span class="hljs-type">int</span> local_sum[<span class="hljs-number">1024</span>];<br><br>        <span class="hljs-keyword">for</span>(<span class="hljs-type">int</span> j = <span class="hljs-number">0</span>;j &lt; <span class="hljs-number">1024</span>;j++)&#123;<br>            local_sum[j] = arr[i * <span class="hljs-number">1024</span> + j];<br>        &#125;<br><br>        <span class="hljs-keyword">for</span>(<span class="hljs-type">int</span> j = <span class="hljs-number">0</span>;j &lt; <span class="hljs-number">512</span>;j++)&#123;<br>            local_sum[j] += local_sum[j + <span class="hljs-number">512</span>];<br>        &#125;<br><br>        <span class="hljs-keyword">for</span>(<span class="hljs-type">int</span> j = <span class="hljs-number">0</span>;j &lt; <span class="hljs-number">256</span>;j++)&#123;<br>            local_sum[j] += local_sum[j + <span class="hljs-number">256</span>];<br>        &#125;<br><br>        <span class="hljs-keyword">for</span>(<span class="hljs-type">int</span> j = <span class="hljs-number">0</span>;j &lt; <span class="hljs-number">128</span>;j++)&#123;<br>            local_sum[j] += local_sum[j + <span class="hljs-number">128</span>];<br>        &#125;<br><br>        <span class="hljs-keyword">for</span>(<span class="hljs-type">int</span> j = <span class="hljs-number">0</span>;j &lt; <span class="hljs-number">64</span>;j++)&#123;<br>            local_sum[j] += local_sum[j + <span class="hljs-number">64</span>];<br>        &#125;<br><br>        <span class="hljs-keyword">for</span>(<span class="hljs-type">int</span> j = <span class="hljs-number">0</span>;j &lt; <span class="hljs-number">32</span>;j++)&#123;<br>            local_sum[j] += local_sum[j + <span class="hljs-number">32</span>];<br>        &#125;<br><br>        <span class="hljs-keyword">for</span>(<span class="hljs-type">int</span> j = <span class="hljs-number">0</span>;j &lt; <span class="hljs-number">16</span>;j++)&#123;<br>            local_sum[j] += local_sum[j + <span class="hljs-number">16</span>];<br>        &#125;<br><br>        <span class="hljs-keyword">for</span>(<span class="hljs-type">int</span> j = <span class="hljs-number">0</span>;j &lt; <span class="hljs-number">8</span>;j++)&#123;<br>            local_sum[j] += local_sum[j + <span class="hljs-number">8</span>];<br>        &#125;<br><br>        <span class="hljs-keyword">for</span>(<span class="hljs-type">int</span> j = <span class="hljs-number">0</span>;j &lt; <span class="hljs-number">4</span>;j++)&#123;<br>            local_sum[j] += local_sum[j + <span class="hljs-number">4</span>];<br>        &#125;<br><br>        <span class="hljs-keyword">for</span>(<span class="hljs-type">int</span> j = <span class="hljs-number">0</span>;j &lt; <span class="hljs-number">2</span>;j++)&#123;<br>            local_sum[j] += local_sum[j + <span class="hljs-number">2</span>];<br>        &#125;<br><br>        <span class="hljs-keyword">for</span>(<span class="hljs-type">int</span> j = <span class="hljs-number">0</span>;j &lt; <span class="hljs-number">1</span>;j++)&#123;<br>            local_sum[j] += local_sum[j + <span class="hljs-number">1</span>];<br>        &#125;<br>        sum[i] = local_sum[<span class="hljs-number">0</span>];<br>    &#125;<br>&#125;<br></code></pre></td></tr></table></figure>
+
+<h2 id="Shared-Memory"><a href="#Shared-Memory" class="headerlink" title="Shared Memory"></a>Shared Memory</h2><p>上面已经实现了无数据依赖可以并行的for循环， 那么如何将他变成真正的并行？对于上面的无数据依赖的for，我们可以将线程升级为板块(block),线程局部数组升级为板块局部数组。</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br></pre></td><td class="code"><pre><code class="hljs cpp"><span class="hljs-function">__global__void <span class="hljs-title">parallel_sum</span><span class="hljs-params">(<span class="hljs-type">int</span> *sum, <span class="hljs-type">int</span> <span class="hljs-type">const</span>* arr, <span class="hljs-type">int</span> n)</span></span>&#123;<br>    __shared__ <span class="hljs-type">int</span> local_sum[<span class="hljs-number">1024</span>];<br><br>    <span class="hljs-type">int</span> i = threadIdx.x;<br>    <span class="hljs-type">int</span> j = blockIdx.x;<br><br>    local_sum[j] = arr[i * <span class="hljs-number">1024</span> + j];<br>    __syncthreads();<br>    <br>    <span class="hljs-keyword">if</span> (j &lt; <span class="hljs-number">512</span>)&#123;<br>        local_sum[j] += local_sum[j + <span class="hljs-number">512</span>];<br>    &#125;<br>    __syncthreads();<br><br>    <span class="hljs-keyword">if</span> (j &lt; <span class="hljs-number">256</span>)&#123;<br>        local_sum[j] += local_sum[j + <span class="hljs-number">256</span>];<br>    &#125;<br>    __syncthreads();<br><br>    <span class="hljs-keyword">if</span> (j &lt; <span class="hljs-number">128</span>)&#123;<br>        local_sum[j] += local_sum[j + <span class="hljs-number">128</span>];<br>    &#125;<br>    __syncthreads();<br><br>    <span class="hljs-keyword">if</span> (j &lt; <span class="hljs-number">64</span>)&#123;<br>        local_sum[j] += local_sum[j + <span class="hljs-number">64</span>];<br>    &#125;<br>    __syncthreads();<br><br>    <span class="hljs-keyword">if</span> (j &lt; <span class="hljs-number">32</span>)&#123;<br>        local_sum[j] += local_sum[j + <span class="hljs-number">32</span>];<br>    &#125;<br>    __syncthreads();<br><br>    <span class="hljs-keyword">if</span> (j &lt; <span class="hljs-number">16</span>)&#123;<br>        local_sum[j] += local_sum[j + <span class="hljs-number">16</span>];<br>    &#125;<br>    __syncthreads();<br><br>    <span class="hljs-keyword">if</span>(j &lt; <span class="hljs-number">8</span>)&#123;<br>        local_sum[j] += local_sum[j + <span class="hljs-number">8</span>];<br>    &#125;<br>    __syncthreads();<br><br>    <span class="hljs-keyword">if</span>(j &lt; <span class="hljs-number">4</span>)&#123;<br>        local_sum[j] += local_sum[j + <span class="hljs-number">4</span>];<br>    &#125;<br>    __syncthreads();<br><br>    <span class="hljs-keyword">if</span>(j &lt; <span class="hljs-number">2</span>)&#123;<br>        local_sum[j] += local_sum[j + <span class="hljs-number">2</span>];<br>    &#125;<br>    __syncthreads();<br><br>    <span class="hljs-keyword">if</span>(j == <span class="hljs-number">0</span>)&#123;<br>        sum[i] = local_sum[<span class="hljs-number">0</span>] + local_sum[<span class="hljs-number">1</span>];<br>    &#125;<br>&#125;<br></code></pre></td></tr></table></figure>
+<blockquote>
+<p>这里代码是线程并行的， 如果不加__syncthreads(), 有的代码运行到了j &lt; 32,而有的才运行到 j &lt; 64,这就导致了归约顺序出现了问题。</p>
+</blockquote>
+<p>我们可以进一步优化这个代码，因为线程组是以32个为单位进行了， 一个线程组内部本身就是同步的。在j &lt; 32的时候，不需要加入sync..</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br></pre></td><td class="code"><pre><code class="hljs cpp"><span class="hljs-function">__global__void <span class="hljs-title">parallel_sum</span><span class="hljs-params">(<span class="hljs-type">int</span> *sum, <span class="hljs-type">int</span> <span class="hljs-type">const</span>* arr, <span class="hljs-type">int</span> n)</span></span>&#123;<br>    __shared__ <span class="hljs-type">int</span> local_sum[<span class="hljs-number">1024</span>];<br><br>    <span class="hljs-type">int</span> i = threadIdx.x;<br>    <span class="hljs-type">int</span> j = blockIdx.x;<br><br>    local_sum[j] = arr[i * <span class="hljs-number">1024</span> + j];<br>    __syncthreads();<br>    <br>    <span class="hljs-keyword">if</span> (j &lt; <span class="hljs-number">512</span>)&#123;<br>        local_sum[j] += local_sum[j + <span class="hljs-number">512</span>];<br>    &#125;<br>    __syncthreads();<br><br>    <span class="hljs-keyword">if</span> (j &lt; <span class="hljs-number">256</span>)&#123;<br>        local_sum[j] += local_sum[j + <span class="hljs-number">256</span>];<br>    &#125;<br>    __syncthreads();<br><br>    <span class="hljs-keyword">if</span> (j &lt; <span class="hljs-number">128</span>)&#123;<br>        local_sum[j] += local_sum[j + <span class="hljs-number">128</span>];<br>    &#125;<br>    __syncthreads();<br><br>    <span class="hljs-keyword">if</span> (j &lt; <span class="hljs-number">64</span>)&#123;<br>        local_sum[j] += local_sum[j + <span class="hljs-number">64</span>];<br>    &#125;<br>    __syncthreads();<br><br>    <span class="hljs-keyword">if</span> (j &lt; <span class="hljs-number">32</span>)&#123;<br>        local_sum[j] += local_sum[j + <span class="hljs-number">32</span>];<br>    &#125;<br><br>    <span class="hljs-keyword">if</span> (j &lt; <span class="hljs-number">16</span>)&#123;<br>        local_sum[j] += local_sum[j + <span class="hljs-number">16</span>];<br>    &#125;<br><br>    <span class="hljs-keyword">if</span>(j &lt; <span class="hljs-number">8</span>)&#123;<br>        local_sum[j] += local_sum[j + <span class="hljs-number">8</span>];<br>    &#125;<br><br>    <span class="hljs-keyword">if</span>(j &lt; <span class="hljs-number">4</span>)&#123;<br>        local_sum[j] += local_sum[j + <span class="hljs-number">4</span>];<br>    &#125;<br><br>    <span class="hljs-keyword">if</span>(j &lt; <span class="hljs-number">2</span>)&#123;<br>        local_sum[j] += local_sum[j + <span class="hljs-number">2</span>];<br>    &#125;<br><br>    <span class="hljs-keyword">if</span>(j == <span class="hljs-number">0</span>)&#123;<br>        sum[i] = local_sum[<span class="hljs-number">0</span>] + local_sum[<span class="hljs-number">1</span>];<br>    &#125;<br>&#125;<br></code></pre></td></tr></table></figure>
+
+<h2 id="线程组分歧"><a href="#线程组分歧" class="headerlink" title="线程组分歧"></a>线程组分歧</h2><p>在 NVIDIA GPU 中，基本的调度单位是 Warp（线程束&#x2F;线程组），一个 Warp 包含 32 个线程。<br>线程组分歧是指：当同一个 Warp 中的 32 个线程在执行代码时，遇到了条件分支（如 if-else、switch 或 while），且一部分线程走向了 A 分支，另一部分线程走向了 B 分支。由于一个 Warp 在同一时刻只能执行同一条指令，硬件无法让线程 0 跑 if 的同时让线程 1 跑 else。</p>
+<blockquote>
+<p>当分歧发生时，GPU 硬件会采取“牺牲时间”的策略：</p>
+<ol>
+<li>执行分支 A：此时，所有走向分支 B 的线程会被屏蔽（Masked），处于空闲等待状态。</li>
+<li>执行分支 B：此时，所有走向分支 A 的线程被屏蔽，轮到分支 B 的线程工作。</li>
+<li>合并：两个分支都跑完后，32 个线程重新汇合，继续执行后面的指令。</li>
+<li>结果： 原本应该并行完成的任务，因为分歧变成了串行执行。如果 if 和 else 各占一半，那么该 Warp 的理论计算性能直接损失 50%。</li>
+</ol>
+</blockquote>
+<p>所以我们上边的一段代码实际上还可以进行优化，将<code>j &lt; 32</code>的部分都合并为一个，避免了线程分歧：</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><code class="hljs cpp"><br><span class="hljs-keyword">if</span>(j &lt; <span class="hljs-number">32</span>)&#123;<br>    local_sum[j] += local_sum[j + <span class="hljs-number">32</span>];<br>    local_sum[j] += local_sum[j + <span class="hljs-number">16</span>];<br>    local_sum[j] += local_sum[j + <span class="hljs-number">8</span>];<br>    local_sum[j] += local_sum[j + <span class="hljs-number">4</span>];<br>    local_sum[j] += local_sum[j + <span class="hljs-number">2</span>];<br><br>    <span class="hljs-keyword">if</span>(j == <span class="hljs-number">0</span>)&#123;<br>        sum[i] = local_sum[<span class="hljs-number">0</span>] + local_sum[<span class="hljs-number">1</span>];<br>    &#125;<br>&#125;<br><br></code></pre></td></tr></table></figure>
+
+<h2 id="寄存器打翻-register-spill"><a href="#寄存器打翻-register-spill" class="headerlink" title="寄存器打翻(register spill)"></a>寄存器打翻(register spill)</h2><h3 id="板块中线程数量太多"><a href="#板块中线程数量太多" class="headerlink" title="板块中线程数量太多"></a>板块中线程数量太多</h3><ul>
+<li>GPU一个板块中的线程，共享一个共同的寄存器仓库（实际上也是一段比较小的内存）， 所以当把模块中的线程数量（blockDim）太多的时候，会导致每个线程分配到的寄存器数量急剧缩小。另一方面， 如果程序需要大量的寄存器，就没有办法全部装在高效的寄存器仓库里，导致一部分寄存器“打翻”到一级缓存中，这些寄存器与寄存器仓库中的读写速度就不一致，相对而言就低效</li>
+<li>如果线程局部分配了一个数组，并通过动态下标访问，那么这个数组会被分配到一级缓存中，因为寄存器不能动态寻址。</li>
+<li>对于Fermi架构， 每个线程最多有63个寄存器。</li>
+</ul>
+<h3 id="板块中的线程太少"><a href="#板块中的线程太少" class="headerlink" title="板块中的线程太少"></a>板块中的线程太少</h3><p>每个SM一次调度板块中的一个线程组（warp），也就是32个线程。当线程陷入内存等待的时候，可以切换到另外一个线程，这样就算一个warp的内存延迟就被另外一个warp隐藏起来了。因此如果线程数量太少，则无法通过多个warp之间的调度来隐藏内存等待的延迟。</p>
+<blockquote>
+<p>block中的线程数量最好是32的整数倍， 因为如果是33个线程的情况下， 第二个warp中只有一个线程，非常浪费。</p>
+</blockquote>
+<p>综合上面的情况：对于使用寄存器少、访存为主的核函数，使用大的blockDim为宜。反之，使用较小的blockDim。</p>
+<h2 id="Example矩阵转置"><a href="#Example矩阵转置" class="headerlink" title="Example矩阵转置"></a>Example矩阵转置</h2><p>首先实现一个简单的矩阵转置版本用一维数组的方式存储。[nx, ny] -&gt; [ny, nx]</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-keyword">template</span>&lt;<span class="hljs-keyword">typename</span> T&gt;</span><br><span class="hljs-function">__global__ <span class="hljs-type">void</span> <span class="hljs-title">parallel_transpose</span><span class="hljs-params">(T* out, T* in,<span class="hljs-type">int</span> nx, <span class="hljs-type">int</span> ny)</span></span>&#123;<br><br>    <span class="hljs-type">int</span> linearized = blockIdx.x * blockDim.x + threadIdx.x;<br>    <span class="hljs-keyword">if</span> (linearized &gt; nx * ny) <span class="hljs-keyword">return</span>;<br>    <span class="hljs-type">int</span> row = linearized / nx;<br>    <span class="hljs-type">int</span> col = linearized % nx;<br><br>    <span class="hljs-keyword">if</span> (row &lt; ny &amp;&amp; col &lt; nx) &#123;<br>        out[col * ny + row] = in[row * nx + col];<br>    &#125;<br>&#125;<br></code></pre></td></tr></table></figure>
+
+<p>这段代码对于内存的访问仍不够高效， 因为in&#x2F;out都存在于GPU的显存当中，并且对于out的访问是跨步的，不符合内存局部性原理。这个问题可以通过板块共享内存解决。下边这段代码通过跨blockSize步数来进行访存(实际和blockDim没什么区别)</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-keyword">template</span>&lt;<span class="hljs-keyword">typename</span> T, <span class="hljs-type">int</span> blockSize </span>= <span class="hljs-number">32</span>&gt;<br><span class="hljs-function">__global__ <span class="hljs-type">void</span> <span class="hljs-title">parallel_transpose</span><span class="hljs-params">(T* out, T* in, <span class="hljs-type">int</span> nx, <span class="hljs-type">int</span> ny)</span></span>&#123;<br>    <span class="hljs-comment">//[nx, ny] -&gt; [nx, ny] -&gt; [ny, nx]</span><br>    <span class="hljs-comment">//这里使用以下二维的blockIdx， 对于y方向这种非连续的访存来说比较简单</span><br><br>    <span class="hljs-type">int</span> x = blockIdx.x * blockSize + threadIdx.x;<br>    <span class="hljs-type">int</span> y = blockIdx.y * blockSize + threadIdx.y;<br>    <span class="hljs-keyword">if</span> (x &gt;= nx || y &gt;= ny) <span class="hljs-keyword">return</span>;<br>    __shared__ T memory[blockSize * blockSize];<br>    <span class="hljs-comment">//第一步从in上连续的读取数据到共享内存</span><br>    <br>    memory[threadIdx.y * blockSize + threadIdx.x] = in[y * nx + x];<br>    __syncthreads();<br><br>    <span class="hljs-comment">// 转置之后的x, y坐标</span><br>    <span class="hljs-type">int</span> rx = blockIdx.y * blockSize + threadIdx.x;<br>    <span class="hljs-type">int</span> ry = blockIdx.x * blockSize + threadIdx.y;<br>    <span class="hljs-comment">// 跨步的从共享内存上读</span><br>    <span class="hljs-keyword">if</span> (rx &lt; ny &amp;&amp; ry &lt; nx) &#123; <span class="hljs-comment">// 必须加上这个判断</span><br>        out[ry * ny + rx] = memory[threadIdx.x * blockSize + threadIdx.y];<br>    &#125;<br>&#125;<br></code></pre></td></tr></table></figure>
+
+<blockquote>
+<p>这里比较反直觉的是为什么多了一步的搬运步骤，反而要比直接从in -&gt; out快呢<br>gemini:<br>GPU 读写全局显存（Global Memory）时，不是一个线程一个线程读的，而是 Warp（32个线程） 一起读。</p>
+<p>合并访问（Coalesced）：如果 32 个线程访问的是连续的 128 字节，硬件&gt;只需要 1 次内存事务。</p>
+<p>跨步访问（Strided）：如果 32 个线程访问的地址散落在各地（比如转置时的列访问），硬件可能需要 32 次内存事务。</p>
+<p>结论：跨步访问的带宽浪费可能高达 32 倍。</p>
+<p>那么这样看起来像是从显存将数据搬移到共享内存中的速度要比从显存到显存快，事实是这样吗？</p>
+<p>在指令的条数上，确实是显存 -&gt; 共享内存 -&gt; 显存的比较长(数据需要从显存搬移到寄存器中再进入到共享内存上)，不过现在的GPU似乎可以省去搬到寄存器这个步骤（待求证）</p>
+<p>真正使得共享内存快的原因是：全局内存访问是以32&#x2F;128字节为一个整体为单位访问的，如果跨步很大， 但是只读取一个数据（比如int），那么有效的数据只有4&#x2F;128，损失的大量的带宽。</p>
+</blockquote>
+<h2 id="Bank-Conflict"><a href="#Bank-Conflict" class="headerlink" title="Bank Conflict"></a>Bank Conflict</h2><p>前一节实现了一个简单的矩阵转置的例子，但是其中仍旧有一个问题，GPU的shared_memory是按照一个个bank为单位进行划分的，总共会划分为32个banks，而线程的访存方式为 <strong>线程i会访问共享内存中下标为i % 32这个位置的bank</strong>。我们期望的方式应该是两个不同的线程i与线程j的访存不冲突，即i与j同时访问不同的bank（如果访问同一个bank，bank内部则需要串行化处理，否则会带来data-race）。</p>
+<blockquote>
+<p>PS 就是说</p>
+<ul>
+<li>arr[0], arr[32], arr[64]…一系列的数据会位于bank_0</li>
+<li>arr[1], arr[33],arr[65]…会位于bank_1</li>
+</ul>
+</blockquote>
+<p>那么在我们转置的过程中，一个warp对于全局内存的访问方式恰好就是这种按<em>列</em>读取，导致一个warp的所有线程都在同时的读取同一个bank。解决这个问题的方式为padding,让共享内存多出一行来，这样就可以恰好的让每一个线程都”错位”。</p>
+<p>给出没有bank conflict的代码：</p>
+<figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><code class="hljs cpp"><span class="hljs-function"><span class="hljs-keyword">template</span>&lt;<span class="hljs-keyword">typename</span> T, <span class="hljs-type">int</span> blockSize </span>= <span class="hljs-number">32</span>&gt;<br><span class="hljs-function">__global__ <span class="hljs-type">void</span> <span class="hljs-title">parallel_transpose</span><span class="hljs-params">(T* out, T* in, <span class="hljs-type">int</span> nx, <span class="hljs-type">int</span> ny)</span> </span>&#123;<br>    <span class="hljs-comment">// 这样每一行的起始地址在 Bank 中会产生“位移”，从而避开冲突</span><br>    __shared__ T memory[blockSize * (blockSize + <span class="hljs-number">1</span>)];<br><br>    <span class="hljs-comment">// 1. 计算原矩阵 in 的读取坐标</span><br>    <span class="hljs-type">int</span> x = blockIdx.x * blockSize + threadIdx.x;<br>    <span class="hljs-type">int</span> y = blockIdx.y * blockSize + threadIdx.y;<br><br>    <span class="hljs-keyword">if</span> (x &lt; nx &amp;&amp; y &lt; ny) &#123;<br>        <span class="hljs-comment">// 写入共享内存：由于每一行长度是 blockSize + 1</span><br>        memory[threadIdx.y * (blockSize + <span class="hljs-number">1</span>) + threadIdx.x] = in[y * ny + x];<br>    &#125;<br>    __syncthreads();<br><br>    <span class="hljs-comment">// 2. 计算转置矩阵 out 的写入坐标</span><br>    <span class="hljs-type">int</span> rx = blockIdx.y * blockSize + threadIdx.x; <br>    <span class="hljs-type">int</span> ry = blockIdx.x * blockSize + threadIdx.y;<br><br>    <span class="hljs-keyword">if</span> (rx &lt; ny &amp;&amp; ry &lt; nx) &#123;<br>        <span class="hljs-comment">// 跨步从共享内存读：由于之前存入时用了 padding</span><br>        <span class="hljs-comment">// 现在的读取索引：threadIdx.x * (blockSize + 1) + threadIdx.y</span><br>        <span class="hljs-comment">// 这一步在原代码中会导致 32 路 Bank Conflict，现在被 padding 完美化解</span><br>        out[ry * ny + rx] = memory[threadIdx.x * (blockSize + <span class="hljs-number">1</span>) + threadIdx.y];<br>        <span class="hljs-comment">//这里线程0会读取 memory[0] - bank_0, 线程1会读取memory[33] - bank_1..，从而避免了冲突。</span><br>    &#125;<br>&#125;<br></code></pre></td></tr></table></figure>
+                
+              </div>
+            
+            <hr/>
+            <div>
+              <div class="post-metas my-3">
+  
+  
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/CUDA/" class="print-no-link">#CUDA</a>
+      
+    </div>
+  
+</div>
+
+
+              
+  
+
+  <div class="license-box my-3">
+    <div class="license-title">
+      <div>CUDA共享内存</div>
+      <div>http://example.com/2026/01/18/cuda共享内存/</div>
+    </div>
+    <div class="license-meta">
+      
+        <div class="license-meta-item">
+          <div>作者</div>
+          <div>Soya</div>
+        </div>
+      
+      
+        <div class="license-meta-item license-meta-date">
+          <div>发布于</div>
+          <div>2026年1月18日</div>
+        </div>
+      
+      
+      
+        <div class="license-meta-item">
+          <div>许可协议</div>
+          <div>
+            
+              
+              
+                <a class="print-no-link" target="_blank" href="https://creativecommons.org/licenses/by/4.0/">
+                  <span class="hint--top hint--rounded" aria-label="BY - 署名">
+                    <i class="iconfont icon-cc-by"></i>
+                  </span>
+                </a>
+              
+            
+          </div>
+        </div>
+      
+    </div>
+    <div class="license-icon iconfont"></div>
+  </div>
+
+
+
+              
+                <div class="post-prevnext my-3">
+                  <article class="post-prev col-6">
+                    
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2026/01/18/cuda%E5%AE%9E%E7%8E%B0%E6%95%B0%E7%BB%84%E5%B9%B6%E8%A1%8C%E6%B1%82%E5%92%8C/" title="CUDA实现并行求和">
+                        <span class="hidden-mobile">CUDA实现并行求和</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+
+            
+          </article>
+        </div>
+      </div>
+    </div>
+
+    <div class="side-col d-none d-lg-block col-lg-2">
+      
+  <aside class="sidebar" style="margin-left: -1rem">
+    <div id="toc">
+  <p class="toc-header">
+    <i class="iconfont icon-list"></i>
+    <span>目录</span>
+  </p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+
+
+  </aside>
+
+
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+
+  
+
+
+  
+  
+
+
+
+
+
+
+
+
+
+    
+
+    
+      <a id="scroll-top-button" aria-label="TOP" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v" for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+    
+
+    
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+  
+    <div class="footer-content">
+       <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>Hexo</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>Fluid</span></a> 
+    </div>
+  
+  
+    <div class="statistics">
+  
+  
+
+  
+    
+      <span id="leancloud-site-pv-container" style="display: none">
+        总访问量 
+        <span id="leancloud-site-pv"></span>
+         次
+      </span>
+    
+    
+      <span id="leancloud-site-uv-container" style="display: none">
+        总访客数 
+        <span id="leancloud-site-uv"></span>
+         人
+      </span>
+    
+    
+
+  
+
+</div>
+
+  
+  
+</div>
+
+  </footer>
+
+  <!-- Scripts -->
+  
+  <script  src="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://lib.baomitu.com/nprogress/0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://lib.baomitu.com/jquery/3.6.4/jquery.min.js" ></script>
+<script  src="https://lib.baomitu.com/twitter-bootstrap/4.6.1/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+
+  <script  src="https://lib.baomitu.com/typed.js/2.0.12/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var subtitle = document.getElementById('subtitle');
+      if (!subtitle || !typing) {
+        return;
+      }
+      var text = subtitle.getAttribute('data-typed-text');
+      
+        typing(text);
+      
+    })(window, document);
+  </script>
+
+
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/tocbot/4.20.1/tocbot.min.js', function() {
+    var toc = jQuery('#toc');
+    if (toc.length === 0 || !window.tocbot) { return; }
+    var boardCtn = jQuery('#board-ctn');
+    var boardTop = boardCtn.offset().top;
+
+    window.tocbot.init(Object.assign({
+      tocSelector     : '#toc-body',
+      contentSelector : '.markdown-body',
+      linkClass       : 'tocbot-link',
+      activeLinkClass : 'tocbot-active-link',
+      listClass       : 'tocbot-list',
+      isCollapsedClass: 'tocbot-is-collapsed',
+      collapsibleClass: 'tocbot-is-collapsible',
+      scrollSmooth    : true,
+      includeTitleTags: true,
+      headingsOffset  : -boardTop,
+    }, CONFIG.toc));
+    if (toc.find('.toc-list-item').length > 0) {
+      toc.css('visibility', 'visible');
+    }
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('tocbot' in window) {
+        tocbot.refresh();
+        var toc = jQuery('#toc');
+        if (toc.length === 0 || !tocbot) {
+          return;
+        }
+        if (toc.find('.toc-list-item').length > 0) {
+          toc.css('visibility', 'visible');
+        }
+      }
+    });
+  });
+</script>
+
+
+  <script src=https://lib.baomitu.com/clipboard.js/2.0.11/clipboard.min.js></script>
+
+  <script>Fluid.plugins.codeWidget();</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/anchor-js/5.0.0/anchor.min.js', function() {
+    window.anchors.options = {
+      placement: CONFIG.anchorjs.placement,
+      visible  : CONFIG.anchorjs.visible
+    };
+    if (CONFIG.anchorjs.icon) {
+      window.anchors.options.icon = CONFIG.anchorjs.icon;
+    }
+    var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+    var res = [];
+    for (var item of el) {
+      res.push('.markdown-body > ' + item.trim());
+    }
+    if (CONFIG.anchorjs.placement === 'left') {
+      window.anchors.options.class = 'anchorjs-link-left';
+    }
+    window.anchors.add(res.join(', '));
+
+    Fluid.events.registerRefreshCallback(function() {
+      if ('anchors' in window) {
+        anchors.removeAll();
+        var el = (CONFIG.anchorjs.element || 'h1,h2,h3,h4,h5,h6').split(',');
+        var res = [];
+        for (var item of el) {
+          res.push('.markdown-body > ' + item.trim());
+        }
+        if (CONFIG.anchorjs.placement === 'left') {
+          anchors.options.class = 'anchorjs-link-left';
+        }
+        anchors.add(res.join(', '));
+      }
+    });
+  });
+</script>
+
+
+  
+<script>
+  Fluid.utils.createScript('https://lib.baomitu.com/fancybox/3.5.7/jquery.fancybox.min.js', function() {
+    Fluid.plugins.fancyBox();
+  });
+</script>
+
+
+  <script>Fluid.plugins.imageCaption();</script>
+
+  
+      <script>
+        if (!window.MathJax) {
+          window.MathJax = {
+            tex    : {
+              inlineMath: { '[+]': [['$', '$']] }
+            },
+            loader : {
+              load: ['ui/lazy']
+            },
+            options: {
+              renderActions: {
+                insertedScript: [200, () => {
+                  document.querySelectorAll('mjx-container').forEach(node => {
+                    let target = node.parentNode;
+                    if (target.nodeName.toLowerCase() === 'li') {
+                      target.parentNode.classList.add('has-jax');
+                    }
+                  });
+                }, '', false]
+              }
+            }
+          };
+        } else {
+          MathJax.startup.document.state(0);
+          MathJax.texReset();
+          MathJax.typeset();
+          MathJax.typesetPromise();
+        }
+
+        Fluid.events.registerRefreshCallback(function() {
+          if ('MathJax' in window && MathJax.startup.document && typeof MathJax.startup.document.state === 'function') {
+            MathJax.startup.document.state(0);
+            MathJax.texReset();
+            MathJax.typeset();
+            MathJax.typesetPromise();
+          }
+        });
+      </script>
+    
+
+  <script  src="https://lib.baomitu.com/mathjax/3.2.2/es5/tex-mml-chtml.js" ></script>
+
+  <script defer src="/js/leancloud.js" ></script>
+
+  <script  src="/js/local-search.js" ></script>
+
+
+
+
+
+<!-- 主题的启动项，将它保持在最底部 -->
+<!-- the boot of the theme, keep it at the bottom -->
+<script  src="/js/boot.js" ></script>
+
+
+  
+
+  <noscript>
+    <div class="noscript-warning">博客在允许 JavaScript 运行的环境下浏览效果更佳</div>
+  </noscript>
+</body>
+</html>
