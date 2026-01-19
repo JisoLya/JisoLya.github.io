@@ -19,12 +19,12 @@
   <meta name="author" content="Soya">
   <meta name="keywords" content="">
   
-    <meta name="description" content="Soya的个人博客">
+    <meta name="description" content="Soyazz的个人博客">
 <meta property="og:type" content="website">
 <meta property="og:title" content="Welcome to my blog!">
 <meta property="og:url" content="http://example.com/index.html">
 <meta property="og:site_name" content="Welcome to my blog!">
-<meta property="og:description" content="Soya的个人博客">
+<meta property="og:description" content="Soyazz的个人博客">
 <meta property="og:locale" content="zh_CN">
 <meta property="article:author" content="Soya">
 <meta name="twitter:card" content="summary_large_image">
@@ -282,15 +282,15 @@
     <article class="col-12 col-md-12 mx-auto index-info">
       <h2 class="index-header">
         
-        <a href="/2026/01/18/cuda%E5%85%B1%E4%BA%AB%E5%86%85%E5%AD%98/" target="_self">
-          CUDA共享内存
+        <a href="/2026/01/18/cuda%E5%AE%9E%E7%8E%B0%E6%95%B0%E7%BB%84%E5%B9%B6%E8%A1%8C%E6%B1%82%E5%92%8C/" target="_self">
+          CUDA实现并行求和
         </a>
       </h2>
 
       
-      <a class="index-excerpt index-excerpt__noimg" href="/2026/01/18/cuda%E5%85%B1%E4%BA%AB%E5%86%85%E5%AD%98/" target="_self">
+      <a class="index-excerpt index-excerpt__noimg" href="/2026/01/18/cuda%E5%AE%9E%E7%8E%B0%E6%95%B0%E7%BB%84%E5%B9%B6%E8%A1%8C%E6%B1%82%E5%92%8C/" target="_self">
         <div>
-          CUDA共享内存SM(Streaming Multiprocessors)与板块(block)在先前我们利用网格跨步循环实现了数组的加法，但是其中利用了atomicAdd()这样的原子化操作导致实际上每一个线程都是串行化进行了，并不能发挥GPU的并行计算能力。 如果不使用原子计算的方式，我们就要将sum变为数组，下边的这段代码每一个线程计算一段地址0-1023， 1024-2045 …，将求和的大
+          CUDA中的网格跨步循环参考 https://www.codeleading.com/article/6260306169/cuda中的kernel我们一般会这样写 12345__global__ void parallel_run(int n)&#123;    for(int i = threadIdx.x + blockIdx.x * blockDim.x;i &lt; n;i += blo
         </div>
       </a>
 
@@ -322,15 +322,15 @@
     <article class="col-12 col-md-12 mx-auto index-info">
       <h2 class="index-header">
         
-        <a href="/2026/01/18/cuda%E5%AE%9E%E7%8E%B0%E6%95%B0%E7%BB%84%E5%B9%B6%E8%A1%8C%E6%B1%82%E5%92%8C/" target="_self">
-          CUDA实现并行求和
+        <a href="/2026/01/18/cuda%E5%85%B1%E4%BA%AB%E5%86%85%E5%AD%98/" target="_self">
+          CUDA共享内存
         </a>
       </h2>
 
       
-      <a class="index-excerpt index-excerpt__noimg" href="/2026/01/18/cuda%E5%AE%9E%E7%8E%B0%E6%95%B0%E7%BB%84%E5%B9%B6%E8%A1%8C%E6%B1%82%E5%92%8C/" target="_self">
+      <a class="index-excerpt index-excerpt__noimg" href="/2026/01/18/cuda%E5%85%B1%E4%BA%AB%E5%86%85%E5%AD%98/" target="_self">
         <div>
-          CUDA中的网格跨步循环参考 https://www.codeleading.com/article/6260306169/cuda中的kernel我们一般会这样写 12345__global__ void parallel_run(int n)&#123;    for(int i = threadIdx.x + blockIdx.x * blockDim.x;i &lt; n;i += blo
+          CUDA共享内存SM(Streaming Multiprocessors)与板块(block)在先前我们利用网格跨步循环实现了数组的加法，但是其中利用了atomicAdd()这样的原子化操作导致实际上每一个线程都是串行化进行了，并不能发挥GPU的并行计算能力。 如果不使用原子计算的方式，我们就要将sum变为数组，下边的这段代码每一个线程计算一段地址0-1023， 1024-2045 …，将求和的大
         </div>
       </a>
 
