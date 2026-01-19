@@ -19,25 +19,26 @@
   <meta name="author" content="Soya">
   <meta name="keywords" content="">
   
-    <meta name="description" content="HNSW 层次化可导航的小世界背景就不一一解释了， 主要是为了解决相似性查找的问题。 相关概念介绍1. Proximity GraphProximity Graph 的主要思想是，随机选取一个开始节点， 从这个节点开始搜索它的邻居，找到邻居中和目标节点距离最近的一个， 再以这个邻居开始进行下一轮迭代。 思路很简单的同时，存在着非常多的问题，最为关键的就是搜索复杂度无法确定，孤岛效应难以解决，以及构">
+    <meta name="description" content="GPT2&#x2F;Qwen2 模型架构Transformer在介绍GPT2与Qwen2的模型架构前，首先需要简单的回顾一下Transformer架构，这里就默认读者已经基本了解Transformer了，贴出一个图。 左侧是Encoder部分而右侧是Decoder部分。至于为什么需要将Encoder的输出输入到Decoder当中，以一个机器翻译任务举例。我爱你 -&gt; I love you 首">
 <meta property="og:type" content="article">
-<meta property="og:title" content="HNSW论文笔记">
-<meta property="og:url" content="http://example.com/2025/05/11/HNSW%E8%AE%BA%E6%96%87%E7%AC%94%E8%AE%B0/index.html">
+<meta property="og:title" content="Qwen&amp;GPT2 模型架构">
+<meta property="og:url" content="http://example.com/2026/01/19/Qwen-GPT2-architecture/index.html">
 <meta property="og:site_name" content="Welcome to my blog!">
-<meta property="og:description" content="HNSW 层次化可导航的小世界背景就不一一解释了， 主要是为了解决相似性查找的问题。 相关概念介绍1. Proximity GraphProximity Graph 的主要思想是，随机选取一个开始节点， 从这个节点开始搜索它的邻居，找到邻居中和目标节点距离最近的一个， 再以这个邻居开始进行下一轮迭代。 思路很简单的同时，存在着非常多的问题，最为关键的就是搜索复杂度无法确定，孤岛效应难以解决，以及构">
+<meta property="og:description" content="GPT2&#x2F;Qwen2 模型架构Transformer在介绍GPT2与Qwen2的模型架构前，首先需要简单的回顾一下Transformer架构，这里就默认读者已经基本了解Transformer了，贴出一个图。 左侧是Encoder部分而右侧是Decoder部分。至于为什么需要将Encoder的输出输入到Decoder当中，以一个机器翻译任务举例。我爱你 -&gt; I love you 首">
 <meta property="og:locale" content="zh_CN">
-<meta property="og:image" content="http://example.com/.com//layersearch.png">
-<meta property="og:image" content="http://example.com/.com//insertion.png">
-<meta property="article:published_time" content="2025-05-11T12:51:10.000Z">
-<meta property="article:modified_time" content="2025-09-04T09:27:10.023Z">
+<meta property="og:image" content="http://example.com/2026/01/19/Qwen-GPT2-architecture/transformer.png">
+<meta property="og:image" content="http://example.com/2026/01/19/Qwen-GPT2-architecture/DecoderOnly.png">
+<meta property="og:image" content="http://example.com/2026/01/19/Qwen-GPT2-architecture/model_para.png">
+<meta property="article:published_time" content="2026-01-19T10:09:00.000Z">
+<meta property="article:modified_time" content="2026-01-19T09:11:46.149Z">
 <meta property="article:author" content="Soya">
-<meta property="article:tag" content="DataBase">
+<meta property="article:tag" content="Transformer">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:image" content="http://example.com/.com//layersearch.png">
+<meta name="twitter:image" content="http://example.com/2026/01/19/Qwen-GPT2-architecture/transformer.png">
   
   
   
-  <title>HNSW论文笔记 - Welcome to my blog!</title>
+  <title>Qwen&amp;GPT2 模型架构 - Welcome to my blog!</title>
 
   <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
 
@@ -216,7 +217,7 @@
       <div class="banner-text text-center fade-in-up">
         <div class="h2">
           
-            <span id="subtitle" data-typed-text="HNSW论文笔记"></span>
+            <span id="subtitle" data-typed-text="Qwen&amp;GPT2 模型架构"></span>
           
         </div>
 
@@ -227,8 +228,8 @@
     
       <span class="post-meta">
         <i class="iconfont icon-date-fill" aria-hidden="true"></i>
-        <time datetime="2025-05-11 20:51" pubdate>
-          2025年5月11日 晚上
+        <time datetime="2026-01-19 18:09" pubdate>
+          2026年1月19日 晚上
         </time>
       </span>
     
@@ -239,7 +240,7 @@
       <span class="post-meta mr-2">
         <i class="iconfont icon-chart"></i>
         
-          1.2k 字
+          904 字
         
       </span>
     
@@ -250,7 +251,7 @@
         
         
         
-          10 分钟
+          8 分钟
         
       </span>
     
@@ -296,40 +297,32 @@
       <div class="container nopadding-x-md" id="board-ctn">
         <div id="board">
           <article class="post-content mx-auto">
-            <h1 id="seo-header">HNSW论文笔记</h1>
+            <h1 id="seo-header">Qwen&amp;GPT2 模型架构</h1>
             
             
               <div class="markdown-body">
                 
-                <h1 id="HNSW-层次化可导航的小世界"><a href="#HNSW-层次化可导航的小世界" class="headerlink" title="HNSW 层次化可导航的小世界"></a>HNSW 层次化可导航的小世界</h1><p>背景就不一一解释了， 主要是为了解决相似性查找的问题。</p>
-<h3 id="相关概念介绍"><a href="#相关概念介绍" class="headerlink" title="相关概念介绍"></a>相关概念介绍</h3><h4 id="1-Proximity-Graph"><a href="#1-Proximity-Graph" class="headerlink" title="1. Proximity Graph"></a>1. Proximity Graph</h4><p><em>Proximity Graph</em> 的主要思想是，随机选取一个开始节点， 从这个节点开始搜索它的邻居，找到邻居中和目标节点距离最近的一个， 再以这个邻居开始进行下一轮迭代。</p>
-<p>思路很简单的同时，存在着非常多的问题，最为关键的就是搜索复杂度无法确定，孤岛效应难以解决，以及构建图的开销太高，复杂度达到了指数级别。</p>
-<h4 id="2-可导航的小世界模型"><a href="#2-可导航的小世界模型" class="headerlink" title="2. 可导航的小世界模型"></a>2. 可导航的小世界模型</h4><p><em>Navigable small world models</em> 的主要思想是：我们把库中的节点随机插入图中，每次插入节点的时候都找图中和被插入节点最近的M个每个节点连边，这样保证了图的连通性。</p>
+                <h1 id="GPT2-Qwen2-模型架构"><a href="#GPT2-Qwen2-模型架构" class="headerlink" title="GPT2&#x2F;Qwen2 模型架构"></a>GPT2&#x2F;Qwen2 模型架构</h1><h2 id="Transformer"><a href="#Transformer" class="headerlink" title="Transformer"></a>Transformer</h2><p>在介绍GPT2与Qwen2的模型架构前，首先需要简单的回顾一下Transformer架构，这里就默认读者已经基本了解Transformer了，贴出一个图。<br><img src="/2026/01/19/Qwen-GPT2-architecture/transformer.png" srcset="/img/loading.gif" lazyload alt="Transformer"></p>
+<p>左侧是Encoder部分而右侧是Decoder部分。至于为什么需要将Encoder的输出输入到Decoder当中，以一个机器翻译任务举例。我爱你 -&gt; I love you</p>
+<p>首先Encoder的输入为原始的词嵌入，位置编码信息，这部分在另一篇文档中给出了。至于为什么是mask-MultiHead att：在Encoder中我们需要把不同batch(也就是不同的句子集合)都padding为相同的长度，这样适合于向量化运算，所以计算self-att的时候需要把padding的部分mask掉(因为句子这里本身是没有任何消息的)。至于在Bert（Masked Language Modeling - MLM）预训练过程中，他们更类似于做”完形填空”，mask是用来挖空的。</p>
 <blockquote>
-<p>文章反复提到的对数多项式复杂度实际上是:<br>$$a_{k}log^{k}(n)+…+a_1log(n)+a_0$$</p>
+<p>举个例子： 我 [masked] 你</p>
 </blockquote>
-<h3 id="HNSW算法简单概述"><a href="#HNSW算法简单概述" class="headerlink" title="HNSW算法简单概述"></a>HNSW算法简单概述</h3><p>NSW中单个贪心搜索的多对数复杂性的原因在于，总的距离计算次数大致与贪心算法跳转的平均次数与贪心路径上节点的平均度数的乘积成正比。</p>
-<p>HNSW的主要思想是根据节点之间连接的长度尺度将图分为不同的层，然后再多层图中进行搜索。<br><img src="/.com//layersearch.png" srcset="/img/loading.gif" lazyload alt="图1. layersearch.png"></p>
-<!-- 本地预览的时候用下边这个引用方式，否则博客上显示不出来 -->
-<!-- ![layersearch.png](./HNSW论文笔记/layersearch.png) -->
+<p>经过Encoder的处理之后，输出的矩阵被复制一份，分别经过两个线性层作为Decoder的K与V，作为Decoder中att的输入。</p>
+<figure class="highlight gherkin"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><code class="hljs gherkin">Encoder 输出的同一个矩阵<br>       |<span class="hljs-string"></span><br><span class="hljs-string">       +---------------------+</span><br><span class="hljs-string">       </span>|<span class="hljs-string">                     </span>|<br>       v                     v<br>[线性变换 W_k]          [线性变换 W_v]<br>       |<span class="hljs-string">                     </span>|<br>       v                     v<br>   第一部分：Key (K)      第二部分：Value (V)<br>   (用来被 Query 匹配)     (用来被加权提取)<br>           \             /<br>            \           /<br>             \         /<br>         输入到 Decoder 的 Cross-Attention<br></code></pre></td></tr></table></figure>
 
-<p>自图1中的最上层开始，这一层有最长的连接(“zoom in”阶段)，算法会利用贪婪的思想，不断从当前层搜索，直至当前这一层中与目标距离最接近的；接着，算法会进入下一层，紧接着重复上面的步骤。不难想到，底层的子图中会包含有上层的节点，因为在跳转的过程中，下一层的搜索是从上一层的结束节点开始的。</p>
-<p>最近忙着landing，今天正好周末了，更新一下笔记吧~  2025.5.24</p>
-<p>论文中提到，层与层之间的连接可以被设置为某一个常量。一种构造这种层次结构的措施是：对于图中的每一个节点，我们可以分配一个整型数字l，表示这个节点所在的层数。同时，如果我们设置一种有关l的指数衰减的概率，那么每一层的节点数大致就是以 <code>2 -&gt; 4 -&gt; 8</code>指数的形式来增长的，保证了算法的搜索效率(类似与跳表)。</p>
-<p>与NSW不同的是，在节点插入之前，节点不需要被打乱，HNSW的随机性由随机的layer来实现。在节点插入的时候，采用了一种启发式的方法，考虑到所有节点之间的距离而不是仅仅选择距离最近的一个节点。<br><img src="/.com//insertion.png" srcset="/img/loading.gif" lazyload alt="图2. 插入节点的表示"><br>在图2中，如果插入的节点在Cluster 1的范围中，如果选取距离最近的一个节点来建立连接，那么会破环整个图结构的连接性，文章中说到的启发式的方法将这种情况也考虑到，这样整个图仍旧是一个<em>Delaunay graph</em>，同时防止插入节点与$e_2$的距离要小于Cluster 1中节点距离的情况。</p>
+<p>其次是Decoder的输入，图中标出了一个Shift-Right，这里是因为Decoder是一个自回归的模型。</p>
 <blockquote>
-<p><strong>Algorithm 1</strong><br>图的构建过程是由连续的将候选元素插入到图中实现的：<br>INSERT(hnsw, q, M, Mmax, efConstruction, mL)<br>输入参数说明：</p>
-<ol>
-<li>层次图 $hnsw$</li>
-<li>新插入的元素$q$</li>
-<li>已有的连接数$M$</li>
-<li>每层每个元素的最大连接数$M_{max}$</li>
-<li>动态候选元素的列表大小 $efConstruction$</li>
-<li>用于层级生成的归一化因子$m_L$</li>
-</ol>
-<p>输出：更新后的$hnsw$<br>算法流程：<br>1  $W \leftarrow Ø$ &#x2F;&#x2F; 当前发现最邻近的节点列表<br>2  $ep \leftarrow hnsw 的入口节点$<br>3  $L \leftarrow 入口节点的层级$ &#x2F;&#x2F; $hnsw$的最高层<br>4  $l \leftarrow [-ln(uniform(0..1))·m_l]$ &#x2F;&#x2F; 新节点的层级<br>5  $for \space l_c  \leftarrow L … l+1:$<br>6  $\quad W \leftarrow SEARCHLAYER(q, ep, ef&#x3D;1, l_c)$ &#x2F;&#x2F; searchlayer是Algorithm 2<br>7  $\quad ep \leftarrow$ 从$W$中获取距离$q$最近的节点<br>8  $end \space for$<br>9  $for\space l_c \leftarrow min(L,l)… 0:$<br>10 $\quad W \leftarrow SEARCHLAYER(q, ep, efConstruction, l_c)$<br>11 $\quad neighbors \leftarrow SELECTNEIGHBORS(q, W, M, l_c)$&#x2F;&#x2F; Algorithm 3 或Algorithm 4<br>12 $\quad$ 添加从q到neighbors的双向连接<br>13 $\quad for \space each\space e \in neighbors:$<br>14 $\quad \quad eConn\leftarrow neighbourhood(e) \space (l_c层)$<br>15 $\quad \quad if \space |eConn| &gt; M_max:$<br>16 $\quad \quad \quad  eNewConn \leftarrow SELECTNEIGHBORS(e, eConn,  M_max, l_c)$<br>17 $\quad \quad \quad 将l_c这一层的neighbor(e)设置为 eNewConn$<br>18 $\quad \quad end \space if$<br>19 $\quad \quad ep \leftarrow W$<br>20 $\quad end \space for$<br>21 $if \space l &gt; L$<br>22 $\quad 将hnsw的入口设置为q$<br>23 $end\space if$</p>
+<p>通俗的来说 Decoder的预测方式是这样的 [&lt;start&gt;, 预测下一个词] -&gt; [&lt;start&gt;, 单词1, 预测下一个词]，Decoder在预测下一个词的时候需要知道前文。如果直接将原本的词嵌入输入，Decoder是缺失第一个开始标记的(从无到第一个单词的过程)。 所以输入的时候Transformer作为有监督的学习，将输入右移就是添加了开始标记[&lt;start&gt;,我, 爱, 你]</p>
 </blockquote>
-<p>ps: 2025&#x2F;9&#x2F;4<br>后续也没有再看这个东西了，咕咕咕…</p>
+<p>另一点是计算注意力分数的时候同样是Masked Att， 这里mask是为了保证在训练的时候保证<strong>因果性</strong>, Decoder属于是预测下一个词，如果提前把下一个词告诉他那么这个预测就没有意义了。</p>
+<h2 id="GPT2-GPT3模型结构"><a href="#GPT2-GPT3模型结构" class="headerlink" title="GPT2&#x2F;GPT3模型结构"></a>GPT2&#x2F;GPT3模型结构</h2><p>GPT系列使用了Transformer的Decoder架构，他是Decoder-only的模型，相较于原始的transformer，他去掉了中间的Cross-att模块，并经过多次堆叠，大概示例如下:</p>
+<p><img src="/2026/01/19/Qwen-GPT2-architecture/DecoderOnly.png" srcset="/img/loading.gif" lazyload alt="去掉的Cross-Att模块"></p>
+<figure class="highlight gherkin"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><code class="hljs gherkin">[Input]<br>   |<span class="hljs-string"></span><br><span class="hljs-string">[Token Emb] + [Positional Emb (可学习的)]</span><br><span class="hljs-string">   </span>|<br>   |<span class="hljs-string">--- (堆叠 N 层 Block) ---</span><br><span class="hljs-string">   </span>|<span class="hljs-string">  [Block i]</span><br><span class="hljs-string">   </span>|<span class="hljs-string">     </span>|<br>   |<span class="hljs-string">  [Layer Norm]  &lt;-- Pre-Norm</span><br><span class="hljs-string">   </span>|<span class="hljs-string">     </span>|<br>   |<span class="hljs-string">  [Masked Self-Attention]</span><br><span class="hljs-string">   </span>|<span class="hljs-string">     </span>|<br>   |<span class="hljs-string">  [Add] (残差连接直接连到 Norm 之前)</span><br><span class="hljs-string">   </span>|<span class="hljs-string">     </span>|<br>   |<span class="hljs-string">  [Layer Norm]</span><br><span class="hljs-string">   </span>|<span class="hljs-string">     </span>|<br>   |<span class="hljs-string">  [FFN]</span><br><span class="hljs-string">   </span>|<span class="hljs-string">     </span>|<br>   |<span class="hljs-string">  [Add]</span><br><span class="hljs-string">   </span>|<span class="hljs-string">-------------------------</span><br><span class="hljs-string">   </span>|<br>[Layer Norm] (最后的归一化)<br>   |<span class="hljs-string"></span><br><span class="hljs-string">[Linear Projection] (映射回词表大小)</span><br><span class="hljs-string">   </span>|<br>[Softmax]<br></code></pre></td></tr></table></figure>
+<p>另外他还把归一化提前到了att层前，曾经是post-norm，现在采用了pre-norm。下边是一些模型的参数：<br><img src="/2026/01/19/Qwen-GPT2-architecture/model_para.png" srcset="/img/loading.gif" lazyload alt="alt text"></p>
+<p>至于GPT3， 他是GPT2堆料的版本，但是采用了新的Sparse-Att技术，因为原有的注意力机制每个单词需要查看他之前所有的单词来获取注意力分数，这个时间复杂度是O(N^2)的，导致显存爆炸。这里的Sparse-Att是有策略地计算注意力分数而不是全局计算。</p>
+<p>GPT3还提出了一个概念叫做In-Context-Learning， 我认为这和现在的提示词&#x2F;上下文工程很相似，本质上是因为LLM在训练的过程中有过这样的训练样本，类似与 “问题， 答案”这样的。所以在模型中加入一些Context可以有效地提升模型回答的准确率。</p>
+<h2 id="Qwen模型架构"><a href="#Qwen模型架构" class="headerlink" title="Qwen模型架构"></a>Qwen模型架构</h2><p>这部分过两天再更新~</p>
 
                 
               </div>
@@ -342,7 +335,7 @@
     <div class="post-meta">
       <i class="iconfont icon-tags"></i>
       
-        <a href="/tags/DataBase/" class="print-no-link">#DataBase</a>
+        <a href="/tags/Transformer/" class="print-no-link">#Transformer</a>
       
     </div>
   
@@ -354,8 +347,8 @@
 
   <div class="license-box my-3">
     <div class="license-title">
-      <div>HNSW论文笔记</div>
-      <div>http://example.com/2025/05/11/HNSW论文笔记/</div>
+      <div>Qwen&amp;GPT2 模型架构</div>
+      <div>http://example.com/2026/01/19/Qwen-GPT2-architecture/</div>
     </div>
     <div class="license-meta">
       
@@ -367,7 +360,7 @@
       
         <div class="license-meta-item license-meta-date">
           <div>发布于</div>
-          <div>2025年5月11日</div>
+          <div>2026年1月19日</div>
         </div>
       
       
@@ -399,15 +392,15 @@
                   <article class="post-prev col-6">
                     
                     
-                      <a href="/2025/07/13/HugeGraph%E9%87%8D%E6%9E%84-store-gRPC%E6%A8%A1%E5%9D%97%E8%A7%A3%E6%9E%90/" title="HugeGraph重构-store-gRPC模块解析">
-                        <i class="iconfont icon-arrowleft"></i>
-                        <span class="hidden-mobile">HugeGraph重构-store-gRPC模块解析</span>
-                        <span class="visible-mobile">上一篇</span>
-                      </a>
-                    
                   </article>
                   <article class="post-next col-6">
                     
+                    
+                      <a href="/2026/01/18/cuda%E5%85%B1%E4%BA%AB%E5%86%85%E5%AD%98/" title="CUDA共享内存">
+                        <span class="hidden-mobile">CUDA共享内存</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
                     
                   </article>
                 </div>
