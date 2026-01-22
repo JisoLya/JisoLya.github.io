@@ -30,7 +30,7 @@
 <meta property="og:image" content="http://example.com/2026/01/19/Qwen-GPT2-architecture/DecoderOnly.png">
 <meta property="og:image" content="http://example.com/2026/01/19/Qwen-GPT2-architecture/model_para.png">
 <meta property="article:published_time" content="2026-01-19T10:09:00.000Z">
-<meta property="article:modified_time" content="2026-01-19T09:11:46.149Z">
+<meta property="article:modified_time" content="2026-01-22T08:48:35.644Z">
 <meta property="article:author" content="Soya">
 <meta property="article:tag" content="Transformer">
 <meta name="twitter:card" content="summary_large_image">
@@ -240,7 +240,7 @@
       <span class="post-meta mr-2">
         <i class="iconfont icon-chart"></i>
         
-          904 字
+          3.4k 字
         
       </span>
     
@@ -251,7 +251,7 @@
         
         
         
-          8 分钟
+          29 分钟
         
       </span>
     
@@ -319,10 +319,72 @@
 <h2 id="GPT2-GPT3模型结构"><a href="#GPT2-GPT3模型结构" class="headerlink" title="GPT2&#x2F;GPT3模型结构"></a>GPT2&#x2F;GPT3模型结构</h2><p>GPT系列使用了Transformer的Decoder架构，他是Decoder-only的模型，相较于原始的transformer，他去掉了中间的Cross-att模块，并经过多次堆叠，大概示例如下:</p>
 <p><img src="/2026/01/19/Qwen-GPT2-architecture/DecoderOnly.png" srcset="/img/loading.gif" lazyload alt="去掉的Cross-Att模块"></p>
 <figure class="highlight gherkin"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><code class="hljs gherkin">[Input]<br>   |<span class="hljs-string"></span><br><span class="hljs-string">[Token Emb] + [Positional Emb (可学习的)]</span><br><span class="hljs-string">   </span>|<br>   |<span class="hljs-string">--- (堆叠 N 层 Block) ---</span><br><span class="hljs-string">   </span>|<span class="hljs-string">  [Block i]</span><br><span class="hljs-string">   </span>|<span class="hljs-string">     </span>|<br>   |<span class="hljs-string">  [Layer Norm]  &lt;-- Pre-Norm</span><br><span class="hljs-string">   </span>|<span class="hljs-string">     </span>|<br>   |<span class="hljs-string">  [Masked Self-Attention]</span><br><span class="hljs-string">   </span>|<span class="hljs-string">     </span>|<br>   |<span class="hljs-string">  [Add] (残差连接直接连到 Norm 之前)</span><br><span class="hljs-string">   </span>|<span class="hljs-string">     </span>|<br>   |<span class="hljs-string">  [Layer Norm]</span><br><span class="hljs-string">   </span>|<span class="hljs-string">     </span>|<br>   |<span class="hljs-string">  [FFN]</span><br><span class="hljs-string">   </span>|<span class="hljs-string">     </span>|<br>   |<span class="hljs-string">  [Add]</span><br><span class="hljs-string">   </span>|<span class="hljs-string">-------------------------</span><br><span class="hljs-string">   </span>|<br>[Layer Norm] (最后的归一化)<br>   |<span class="hljs-string"></span><br><span class="hljs-string">[Linear Projection] (映射回词表大小)</span><br><span class="hljs-string">   </span>|<br>[Softmax]<br></code></pre></td></tr></table></figure>
-<p>另外他还把归一化提前到了att层前，曾经是post-norm，现在采用了pre-norm。下边是一些模型的参数：<br><img src="/2026/01/19/Qwen-GPT2-architecture/model_para.png" srcset="/img/loading.gif" lazyload alt="alt text"></p>
+<p>另外他还把归一化提前到了att层前，曾经是post-norm，现在采用了pre-norm。下边是一些模型的参数：<br><img src="/2026/01/19/Qwen-GPT2-architecture/model_para.png" srcset="/img/loading.gif" lazyload alt="模型参数"></p>
 <p>至于GPT3， 他是GPT2堆料的版本，但是采用了新的Sparse-Att技术，因为原有的注意力机制每个单词需要查看他之前所有的单词来获取注意力分数，这个时间复杂度是O(N^2)的，导致显存爆炸。这里的Sparse-Att是有策略地计算注意力分数而不是全局计算。</p>
 <p>GPT3还提出了一个概念叫做In-Context-Learning， 我认为这和现在的提示词&#x2F;上下文工程很相似，本质上是因为LLM在训练的过程中有过这样的训练样本，类似与 “问题， 答案”这样的。所以在模型中加入一些Context可以有效地提升模型回答的准确率。</p>
-<h2 id="Qwen模型架构"><a href="#Qwen模型架构" class="headerlink" title="Qwen模型架构"></a>Qwen模型架构</h2><p>这部分过两天再更新~</p>
+<h2 id="Qwen模型架构"><a href="#Qwen模型架构" class="headerlink" title="Qwen模型架构"></a>Qwen模型架构</h2><p>Qwen2同样是Transoformer架构，使用了FFN与普通的注意力机制的计算，但是有以下的几个区别：</p>
+<ol>
+<li>Group Query Attention</li>
+<li>Dual Chunk Attention with yarn</li>
+<li>Mixture-Of-Experts (MoE)</li>
+</ol>
+<p>和Qwen相同，使用了<em>SwiGLU</em>、<em>RoPE</em>、<em>QKV bias</em>、<em>RMSNorm</em>和pre-norm一系列的trick。</p>
+<h3 id="Group-Query-Attention"><a href="#Group-Query-Attention" class="headerlink" title="Group Query Attention"></a>Group Query Attention</h3><p>在了解GQA前，首先需要看看原始的多头注意力机制(MHA)与多查询注意力机制(MQA)。在MHA计算中，每一个 Query (Q) 头都有自己对应的 Key (K) 头和 Value (V) 头，这样在Inference阶段，显存中需存储所有的Query对应的KV，浪费大量显存。MQA的思想是所有的Q都共享同一组KV头，这样虽然极大的节省了显存，但是对于推理阶段模型的性能也带来了很大损失(因为忽略了大量的KV Cache)。</p>
+<p>GQA是一个综合MHA与MQA的一个工程上的权衡，将Q拆分成若干组，一组Q共享同一组KV头，大大减少了KV Cache，同时也保留了MHA多头的特性。</p>
+<p>下边是Inference阶段三种注意力机制QKV的对比：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br></pre></td><td class="code"><pre><code class="hljs python"><span class="hljs-keyword">import</span> torch<br><span class="hljs-keyword">import</span> torch.nn.functional <span class="hljs-keyword">as</span> F<br><br>batch_size = <span class="hljs-number">1</span><br>seq_len = <span class="hljs-number">1</span><br>d_model = <span class="hljs-number">512</span><br>h = <span class="hljs-number">8</span>  <span class="hljs-comment"># Query heads</span><br>d = <span class="hljs-number">64</span> <span class="hljs-comment"># Head dimension</span><br><br><span class="hljs-comment"># 模拟输入</span><br>x = torch.randn(batch_size, seq_len, d_model)<br><span class="hljs-built_in">print</span>(x.shape)<br><br><span class="hljs-comment"># --- 1. MHA (Multi-Head Attention) ---</span><br><span class="hljs-comment"># 每个 Q 对应一个独立的 K 和 V</span><br><span class="hljs-comment"># K, V 的头数 = Q 的头数 (8)</span><br>Wq_mha = torch.randn(d_model, h * d)<br>Wk_mha = torch.randn(d_model, h * d)<br>Wv_mha = torch.randn(d_model, h * d)<br><br>q_mha = (x @ Wq_mha).view(batch_size, h, d) <span class="hljs-comment"># Shape: [1, 8, 64]</span><br>k_mha = (x @ Wk_mha).view(batch_size, h, d) <span class="hljs-comment"># Shape: [1, 8, 64]</span><br>v_mha = (x @ Wv_mha).view(batch_size, h, d) <span class="hljs-comment"># Shape: [1, 8, 64]</span><br><br><br><span class="hljs-comment"># --- 2. MQA (Multi-Query Attention) ---</span><br><span class="hljs-comment"># 所有 Q 共享同一个 K 和 V</span><br><span class="hljs-comment"># K, V 的头数 = 1</span><br>Wq_mqa = torch.randn(d_model, h * d)<br>Wk_mqa = torch.randn(d_model, <span class="hljs-number">1</span> * d)<br>Wv_mqa = torch.randn(d_model, <span class="hljs-number">1</span> * d)<br><br>q_mqa = (x @ Wq_mqa).view(batch_size, h, d) <span class="hljs-comment"># Shape: [1, 8, 64]</span><br>k_mqa = (x @ Wk_mqa).view(batch_size, <span class="hljs-number">1</span>, d) <span class="hljs-comment"># Shape: [1, 1, 64]</span><br>v_mqa = (x @ Wv_mqa).view(batch_size, <span class="hljs-number">1</span>, d) <span class="hljs-comment"># Shape: [1, 1, 64]</span><br><br><span class="hljs-comment"># 计算时需要将 K, V 广播（Repeat）到 8 个头</span><br>k_mqa = k_mqa.expand(-<span class="hljs-number">1</span>, h, -<span class="hljs-number">1</span>) <span class="hljs-comment"># [1, 1, 64] -&gt; [1, 8, 64]</span><br><br><br><span class="hljs-comment"># --- 3. GQA (Group Query Attention) ---</span><br><span class="hljs-comment"># Q 被分成组，每组共享一个 K 和 V</span><br><span class="hljs-comment"># 假设分成 2 组 (g=2)，每组 4 个 Q 头共享 1 个 KV 头</span><br>g = <span class="hljs-number">2</span><br>Wq_gqa = torch.randn(d_model, h * d)<br>Wk_gqa = torch.randn(d_model, g * d)<br>Wv_gqa = torch.randn(d_model, g * d)<br><br>q_gqa = (x @ Wq_gqa).view(batch_size, h, d) <span class="hljs-comment"># Shape: [1, 8, 64]</span><br>k_gqa = (x @ Wk_gqa).view(batch_size, g, d) <span class="hljs-comment"># Shape: [1, 2, 64]</span><br>v_gqa = (x @ Wv_gqa).view(batch_size, g, d) <span class="hljs-comment"># Shape: [1, 2, 64]</span><br><br><span class="hljs-comment"># 计算时需要将 2 个 KV 头“广播”给对应的 Q 组</span><br><span class="hljs-comment"># 这里的 repeat_interleave 表示每个 KV 头复制 4 次 (8/2=4)</span><br>k_gqa = k_gqa.repeat_interleave(h // g, dim=<span class="hljs-number">1</span>) <span class="hljs-comment"># [1, 2, 64] -&gt; [1, 8, 64]</span><br></code></pre></td></tr></table></figure>
+
+<p>对比MHA与GQA，如果Group&#x3D;8，那么模型在推理阶段就可以获得更快的上下文长度，32k -&gt; 32k*8或者是一张单独的显卡可以服务更多的用户。</p>
+<h3 id="Dual-Chunk-Attention-with-Yarn"><a href="#Dual-Chunk-Attention-with-Yarn" class="headerlink" title="Dual Chunk Attention with Yarn"></a>Dual Chunk Attention with Yarn</h3><h4 id="Dual-Chunk-Attention"><a href="#Dual-Chunk-Attention" class="headerlink" title="Dual Chunk Attention"></a>Dual Chunk Attention</h4><p>Dual Chunk Attention (DCA) 与 YaRN (Yet another RoPE extensioN) 是两种为了解决 Transformer “长文本瓶颈” 而产生的互补技术。</p>
+<p>DCA 的核心思想是将超长的序列切分成多个 Chunk（块），并利用分块矩阵的特性来降低计算复杂度和显存占用。在处理长达 100k 甚至 1M 的文本时，全量注意力矩阵（Attention Matrix）是 $N^2$ 级别的，显存根本装不下。DCA 通过以下两个维度进行分解：</p>
+<ul>
+<li>Intra-Chunk Attention（块内注意力）：在每个局部的小块内部进行精细的注意力计算（捕捉局部特征）。</li>
+<li>Inter-Chunk Attention（块间注意力）：块与块之间通过压缩或特定的聚合方式进行信息交换（捕捉长距离依赖）。</li>
+</ul>
+<p>这种情况下就不需要维护一个 $N^2$ 的矩阵，在读取时就不需要一次性将所有的注意力机制全部读入显存进行注意力计算。假设当前有1M的KV Cache，当Inference阶段(利用MHA)预测下一个词的时候，当前的Q需要与1M的KV进行计算。</p>
+<blockquote>
+<p>1M上下文需要的计算量估计：<br>Context Length &#x3D; 1M, head_dimension &#x3D; 128, h_num &#x3D; 64<br>第一步计算Q(维度为1*128) K(1M *128)的乘积,一个head计算量为 2 * Context Length * head_dimension（乘加各一次）<br>64个注意力头需要计算 2 * Context Length * head_dimension * h_num<br>第二步计算与 V(1M * 128) 的乘积<br>总计算量大致为 $\mathbf{16.38}$ G FLOPs，两个计算量相加约等于 32G FLOPs。<br><em>上面只是计算开销，真正耗时的部分是从显存中搬运KV矩阵，由于上下文长度巨大，导致在计算的时候内存局部性降低</em></p>
+</blockquote>
+<p>DCA 的加速方式：它将 $N$ 划分为一个个固定大小的 Chunk。</p>
+<ul>
+<li>计算块内（Intra-Chunk）时：它只需要加载当前所属块的 KV Cache。这部分数据量小，可以完全放入 GPU 极速的 SRAM（Shared Memory） 中反复使用，大大减少了对慢速显存的访问次数。</li>
+<li>计算块间（Inter-Chunk）时：它通过一种“高度压缩”或者“层级化”的索引来读取其他块。比如只读其他块的代表性特征（Centroids），而不是读所有原始 KV。读的数据量少了，速度自然就快了。</li>
+</ul>
+<p>从而实现了显存上的“分治”。</p>
+<h4 id="YaRN-Yet-another-RoPE-extensioN"><a href="#YaRN-Yet-another-RoPE-extensioN" class="headerlink" title="YaRN (Yet another RoPE extensioN)"></a>YaRN (Yet another RoPE extensioN)</h4><p>YaRN是对RoPE的一种外推，在RoPE中，位置会被两两分组，第m个位置的token都被添加了一个旋转角度 $m\theta$。RoPE相较于Transformer的位置编码的好处，参考RoPE位置编码那一篇blog。RoPE本身对于长度外推的方式是线性缩放，如果一个模型本身的上下文长度是4k的，那么RoPE位置编码的频率范围就应该是 $[0,4000 \theta]$,如果给这个模型传入了1M大小的上下文，那么此时的RoPE的频率范围理应是 $[0, 1000000\theta]$，但是模型本身不支持这个大小，所以对这个范围进行一个频率的缩放，将旋转的角度除以一个比例(例如$s &#x3D; 1000000 &#x2F; 4000$)，这样虽然实现了位置的外推，但是两两分组的单词频率的差异也变小了，导致模型识别不同的位置出现问题。</p>
+<p>YaRN的思想是分频外推，既然线性缩放的方式会损失高频细节，那么不如将高频、中频、低频分离进行缩放处理，从而实现上下文长度的外推。<br>在 RoPE 中，每个维度 $i$ 都有一个特定的旋转频率 $\theta_i$，对应的波长 $\lambda_i$ 定义为：<br>$$\lambda_i &#x3D; \frac{2\pi}{\theta_i} &#x3D; 2\pi \cdot 10000^{2i&#x2F;d}$$</p>
+<p><strong>1. 高频维度</strong></p>
+<ul>
+<li>对应维度：维度索引 $i$ 较小的部分。</li>
+<li>数学特征：频率 $\theta_i$ 很大，波长 $\lambda_i$ 很短。</li>
+<li>在YaRN中的角色：由于波长远小于原始预训练长度（如 $L_{old}&#x3D;2048$），这些维度在训练时已经“见过”成百上千次的完整旋转周期。模型对这些旋转非常敏感且熟悉。YaRN 认为这些维度不应该被插值（缩放），否则会模糊模型对相邻词汇的精确感知。</li>
+</ul>
+<p><strong>2. 低频维度</strong></p>
+<ul>
+<li>对应维度：维度索引 $i$ 较大的部分。</li>
+<li>数学特征：频率 $\theta_i$ 极小，波长 $\lambda_i$ 极大。</li>
+<li>在YaRN中的角色：当序列长度扩展到 128k 时，这些维度的旋转角度会超出训练时的范围。YaRN 对这些维度进行完全线性插值。因为它们旋转得慢，稍微缩放一下频率，模型依然能理解这种缓慢的变化，从而感知到极远距离的 Token。</li>
+</ul>
+<p><strong>3. 中频维度</strong></p>
+<ul>
+<li>对应维度：维度索引 $i$ 处于中间(训练时模型上下文长度)的部分。</li>
+<li>在YaRN中的角色：YaRN 使用一个平滑函数 $a(i)$，让这部分维度的缩放比例从1缓慢过渡到 $s$（扩展倍数）。</li>
+</ul>
+<p><em><strong>插值函数</strong></em></p>
+<p>YaRN 引入一个插值函数 $a(i)$，修正后的频率 $\theta’<em>i$ 为：<br>$$\theta’<em>i &#x3D; \frac{\theta_i}{\gamma_i}$$<br>其中缩放系数 $\gamma_i$ 的计算如下：<br>$$\gamma_i &#x3D; (1 - a(i)) \cdot 1 + a(i) \cdot s$$<br>而 $a(i)$ 是根据维度索引 $i$ 确定的平滑函数：<br>$$a(i) &#x3D; \text{clamp}\left( \frac{i - r</em>{min}}{r</em>{max} - r_{min}}, 0, 1 \right)$$<br>其中 $r_{min}$ 和 $r_{max}$ 是由超参数 $\alpha, \beta$ 导出的维度边界。</p>
+<p>我们将位置编码进行插值（即减小频率）时，在计算点积注意力 $QK^T$ 时，平均距离上的余弦相似度会变大。这会导致 Softmax 后的分布变得更加平滑（熵增加），模型会丧失对特定 Token 的关注能力。YaRN 通过修改温度系数来补偿这种损失。在计算 Attention Score 时，引入修正因子 $\sqrt{\hat{s}}$：<br>$$\text{Attention}(Q, K, V) &#x3D; \text{softmax}\left( \frac{QK^T \cdot \sqrt{\hat{s}}}{\sqrt{d_k}} \right)V$$<br>其中 $\hat{s}$ 的经验公式通常与 $s$ 有关。在 YaRN 的实现中，通过实验拟合了一个关于 $s$ 的缩放因子 $m(s)$，用于缩放 $Q$ 和 $K$ 的点积：<br>$$m(s) &#x3D; 0.1 \cdot \ln(s) + 1.0$$<br>修正后的计算通常直接作用于权重：<br>$$Score &#x3D; \frac{QK^T}{\sqrt{d_k}} \cdot m(s)$$</p>
+<h3 id="MoE"><a href="#MoE" class="headerlink" title="MoE"></a>MoE</h3><p>MoE(混合专家模型)，采用了一种根据问题分治的策略，有一点像网络中的“路由”的概念。</p>
+<h4 id="MoE的核心组件"><a href="#MoE的核心组件" class="headerlink" title="MoE的核心组件"></a>MoE的核心组件</h4><p>在传统的Transformer中，每一个Block都只有一个FFN，在MoE中，一个Block有多个这样的FFN，每一份就是一个专家。</p>
+<ol>
+<li><p>专家层<br>每个Block中的各个专家是相互独立的，拥有自身独立的权重矩阵，但是他们的结构相同；同时由于专家之间相互独立，GPU可以让不同的专家处理不同的Token。</p>
+</li>
+<li><p>门控网络<br>门控网络本质上是一个分类器，对于输入的token向量 $x$，Router计算对应的分数 $Score &#x3D; x \cdot W_g$，Softmax处理之后得到各个专家的概率分布，最后inference阶段选取概率最高的Tok-K个专家。</p>
+</li>
+</ol>
+<blockquote>
+<p>补充： MoE中除了处理各个领域知识的专家，同时还有一个共享专家(shared expert),这个共享专家不参与Router的竞争。</p>
+</blockquote>
+<p>综合上面的这些，就能理解Qwen2的总参数量虽然很大，但是实际推理的时候只有一部分的专家被激活了。</p>
 
                 
               </div>
@@ -391,6 +453,12 @@
                 <div class="post-prevnext my-3">
                   <article class="post-prev col-6">
                     
+                    
+                      <a href="/2026/01/22/completable-future/" title="completable-future学习笔记">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">completable-future学习笔记</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
                     
                   </article>
                   <article class="post-next col-6">
