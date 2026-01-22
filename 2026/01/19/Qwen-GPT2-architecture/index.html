@@ -30,7 +30,7 @@
 <meta property="og:image" content="http://example.com/2026/01/19/Qwen-GPT2-architecture/DecoderOnly.png">
 <meta property="og:image" content="http://example.com/2026/01/19/Qwen-GPT2-architecture/model_para.png">
 <meta property="article:published_time" content="2026-01-19T10:09:00.000Z">
-<meta property="article:modified_time" content="2026-01-22T08:48:35.644Z">
+<meta property="article:modified_time" content="2026-01-22T08:58:43.662Z">
 <meta property="article:author" content="Soya">
 <meta property="article:tag" content="Transformer">
 <meta name="twitter:card" content="summary_large_image">
@@ -319,7 +319,7 @@
 <h2 id="GPT2-GPT3模型结构"><a href="#GPT2-GPT3模型结构" class="headerlink" title="GPT2&#x2F;GPT3模型结构"></a>GPT2&#x2F;GPT3模型结构</h2><p>GPT系列使用了Transformer的Decoder架构，他是Decoder-only的模型，相较于原始的transformer，他去掉了中间的Cross-att模块，并经过多次堆叠，大概示例如下:</p>
 <p><img src="/2026/01/19/Qwen-GPT2-architecture/DecoderOnly.png" srcset="/img/loading.gif" lazyload alt="去掉的Cross-Att模块"></p>
 <figure class="highlight gherkin"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><code class="hljs gherkin">[Input]<br>   |<span class="hljs-string"></span><br><span class="hljs-string">[Token Emb] + [Positional Emb (可学习的)]</span><br><span class="hljs-string">   </span>|<br>   |<span class="hljs-string">--- (堆叠 N 层 Block) ---</span><br><span class="hljs-string">   </span>|<span class="hljs-string">  [Block i]</span><br><span class="hljs-string">   </span>|<span class="hljs-string">     </span>|<br>   |<span class="hljs-string">  [Layer Norm]  &lt;-- Pre-Norm</span><br><span class="hljs-string">   </span>|<span class="hljs-string">     </span>|<br>   |<span class="hljs-string">  [Masked Self-Attention]</span><br><span class="hljs-string">   </span>|<span class="hljs-string">     </span>|<br>   |<span class="hljs-string">  [Add] (残差连接直接连到 Norm 之前)</span><br><span class="hljs-string">   </span>|<span class="hljs-string">     </span>|<br>   |<span class="hljs-string">  [Layer Norm]</span><br><span class="hljs-string">   </span>|<span class="hljs-string">     </span>|<br>   |<span class="hljs-string">  [FFN]</span><br><span class="hljs-string">   </span>|<span class="hljs-string">     </span>|<br>   |<span class="hljs-string">  [Add]</span><br><span class="hljs-string">   </span>|<span class="hljs-string">-------------------------</span><br><span class="hljs-string">   </span>|<br>[Layer Norm] (最后的归一化)<br>   |<span class="hljs-string"></span><br><span class="hljs-string">[Linear Projection] (映射回词表大小)</span><br><span class="hljs-string">   </span>|<br>[Softmax]<br></code></pre></td></tr></table></figure>
-<p>另外他还把归一化提前到了att层前，曾经是post-norm，现在采用了pre-norm。下边是一些模型的参数：<br><img src="/2026/01/19/Qwen-GPT2-architecture/model_para.png" srcset="/img/loading.gif" lazyload alt="模型参数"></p>
+<p>另外他还把归一化提前到了att层前，曾经是post-norm，现在采用了pre-norm。下边是一些模型的参数：<br><img src="/2026/01/19/Qwen-GPT2-architecture/model_para.png" srcset="/img/loading.gif" lazyload alt="alt text"></p>
 <p>至于GPT3， 他是GPT2堆料的版本，但是采用了新的Sparse-Att技术，因为原有的注意力机制每个单词需要查看他之前所有的单词来获取注意力分数，这个时间复杂度是O(N^2)的，导致显存爆炸。这里的Sparse-Att是有策略地计算注意力分数而不是全局计算。</p>
 <p>GPT3还提出了一个概念叫做In-Context-Learning， 我认为这和现在的提示词&#x2F;上下文工程很相似，本质上是因为LLM在训练的过程中有过这样的训练样本，类似与 “问题， 答案”这样的。所以在模型中加入一些Context可以有效地提升模型回答的准确率。</p>
 <h2 id="Qwen模型架构"><a href="#Qwen模型架构" class="headerlink" title="Qwen模型架构"></a>Qwen模型架构</h2><p>Qwen2同样是Transoformer架构，使用了FFN与普通的注意力机制的计算，但是有以下的几个区别：</p>
@@ -371,8 +371,19 @@
 <li>在YaRN中的角色：YaRN 使用一个平滑函数 $a(i)$，让这部分维度的缩放比例从1缓慢过渡到 $s$（扩展倍数）。</li>
 </ul>
 <p><em><strong>插值函数</strong></em></p>
-<p>YaRN 引入一个插值函数 $a(i)$，修正后的频率 $\theta’<em>i$ 为：<br>$$\theta’<em>i &#x3D; \frac{\theta_i}{\gamma_i}$$<br>其中缩放系数 $\gamma_i$ 的计算如下：<br>$$\gamma_i &#x3D; (1 - a(i)) \cdot 1 + a(i) \cdot s$$<br>而 $a(i)$ 是根据维度索引 $i$ 确定的平滑函数：<br>$$a(i) &#x3D; \text{clamp}\left( \frac{i - r</em>{min}}{r</em>{max} - r_{min}}, 0, 1 \right)$$<br>其中 $r_{min}$ 和 $r_{max}$ 是由超参数 $\alpha, \beta$ 导出的维度边界。</p>
-<p>我们将位置编码进行插值（即减小频率）时，在计算点积注意力 $QK^T$ 时，平均距离上的余弦相似度会变大。这会导致 Softmax 后的分布变得更加平滑（熵增加），模型会丧失对特定 Token 的关注能力。YaRN 通过修改温度系数来补偿这种损失。在计算 Attention Score 时，引入修正因子 $\sqrt{\hat{s}}$：<br>$$\text{Attention}(Q, K, V) &#x3D; \text{softmax}\left( \frac{QK^T \cdot \sqrt{\hat{s}}}{\sqrt{d_k}} \right)V$$<br>其中 $\hat{s}$ 的经验公式通常与 $s$ 有关。在 YaRN 的实现中，通过实验拟合了一个关于 $s$ 的缩放因子 $m(s)$，用于缩放 $Q$ 和 $K$ 的点积：<br>$$m(s) &#x3D; 0.1 \cdot \ln(s) + 1.0$$<br>修正后的计算通常直接作用于权重：<br>$$Score &#x3D; \frac{QK^T}{\sqrt{d_k}} \cdot m(s)$$</p>
+<p>YaRN 引入一个插值函数 $a(i)$，修正后的频率 $\theta’_i$ 为：</p>
+<p>$$\theta’_i &#x3D; \frac{\theta_i}{\gamma_i}$$</p>
+<p>其中缩放系数 $\gamma_i$ 的计算如下：</p>
+<p>$$\gamma_i &#x3D; (1 - a(i)) \cdot 1 + a(i) \cdot s$$</p>
+<p>而 $a(i)$ 是根据维度索引 $i$ 确定的平滑函数：</p>
+<p>$$a(i) &#x3D; \text{clamp}\left( \frac{i - r_{min}}{r_{max} - r_{min}}, 0, 1 \right)$$</p>
+<p>其中 $r_{min}$ 和 $r_{max}$ 是由超参数 $\alpha, \beta$ 导出的维度边界。</p>
+<p>我们将位置编码进行插值（即减小频率）时，在计算点积注意力 $QK^T$ 时，平均距离上的余弦相似度会变大。这会导致 Softmax 后的分布变得更加平滑（熵增加），模型会丧失对特定 Token 的关注能力。YaRN 通过修改温度系数来补偿这种损失。在计算 Attention Score 时，引入修正因子 $\sqrt{\hat{s}}$：</p>
+<p>$$\text{Attention}(Q, K, V) &#x3D; \text{softmax}\left( \frac{QK^T \cdot \sqrt{\hat{s}}}{\sqrt{d_k}} \right)V$$</p>
+<p>其中 $\hat{s}$ 的经验公式通常与 $s$ 有关。在 YaRN 的实现中，通过实验拟合了一个关于 $s$ 的缩放因子 $m(s)$，用于缩放 $Q$ 和 $K$ 的点积：</p>
+<p>$$m(s) &#x3D; 0.1 \cdot \ln(s) + 1.0$$</p>
+<p>修正后的计算通常直接作用于权重：</p>
+<p>$$Score &#x3D; \frac{QK^T}{\sqrt{d_k}} \cdot m(s)$$</p>
 <h3 id="MoE"><a href="#MoE" class="headerlink" title="MoE"></a>MoE</h3><p>MoE(混合专家模型)，采用了一种根据问题分治的策略，有一点像网络中的“路由”的概念。</p>
 <h4 id="MoE的核心组件"><a href="#MoE的核心组件" class="headerlink" title="MoE的核心组件"></a>MoE的核心组件</h4><p>在传统的Transformer中，每一个Block都只有一个FFN，在MoE中，一个Block有多个这样的FFN，每一份就是一个专家。</p>
 <ol>
