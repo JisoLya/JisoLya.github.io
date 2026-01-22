@@ -21,7 +21,7 @@
   
     <meta name="description" content="store-node阅读笔记在看store-node的源码之前，首先需要知道这个包是做什么的：  这个包主要启动了Raft的节点服务，负责节点生命周期的管理、分区&#x2F;Raft任务的提交(主要)、扫描&#x2F;聚合查询流水线、TTL 清理任务、以及 RocksDB&#x2F;JRaft&#x2F;系统层指标采集等能力。 向外提供了grpc(供内部组件使用)和一些Rest API(用户来管理">
 <meta property="og:type" content="article">
-<meta property="og:title" content="hg-store-node阅读笔记">
+<meta property="og:title" content="hg-store-node-note">
 <meta property="og:url" content="http://example.com/2026/01/22/hg-store-node-note/index.html">
 <meta property="og:site_name" content="Welcome to my blog!">
 <meta property="og:description" content="store-node阅读笔记在看store-node的源码之前，首先需要知道这个包是做什么的：  这个包主要启动了Raft的节点服务，负责节点生命周期的管理、分区&#x2F;Raft任务的提交(主要)、扫描&#x2F;聚合查询流水线、TTL 清理任务、以及 RocksDB&#x2F;JRaft&#x2F;系统层指标采集等能力。 向外提供了grpc(供内部组件使用)和一些Rest API(用户来管理">
@@ -29,14 +29,14 @@
 <meta property="og:image" content="http://example.com/2026/01/22/hg-store-node-note/muti-raft.png">
 <meta property="og:image" content="http://example.com/2026/01/22/hg-store-node-note/request%E5%A4%84%E7%90%86.png">
 <meta property="article:published_time" content="2026-01-22T08:54:01.000Z">
-<meta property="article:modified_time" content="2026-01-22T08:59:53.110Z">
+<meta property="article:modified_time" content="2026-01-22T09:05:20.527Z">
 <meta property="article:author" content="Soya">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="http://example.com/2026/01/22/hg-store-node-note/muti-raft.png">
   
   
   
-  <title>hg-store-node阅读笔记 - Welcome to my blog!</title>
+  <title>hg-store-node-note - Welcome to my blog!</title>
 
   <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
 
@@ -215,7 +215,7 @@
       <div class="banner-text text-center fade-in-up">
         <div class="h2">
           
-            <span id="subtitle" data-typed-text="hg-store-node阅读笔记"></span>
+            <span id="subtitle" data-typed-text="hg-store-node-note"></span>
           
         </div>
 
@@ -238,7 +238,7 @@
       <span class="post-meta mr-2">
         <i class="iconfont icon-chart"></i>
         
-          924 字
+          925 字
         
       </span>
     
@@ -295,7 +295,7 @@
       <div class="container nopadding-x-md" id="board-ctn">
         <div id="board">
           <article class="post-content mx-auto">
-            <h1 id="seo-header">hg-store-node阅读笔记</h1>
+            <h1 id="seo-header">hg-store-node-note</h1>
             
             
               <div class="markdown-body">
@@ -304,16 +304,22 @@
 <ol>
 <li>这个包主要启动了Raft的节点服务，负责节点生命周期的管理、分区&#x2F;Raft任务的提交(主要)、扫描&#x2F;聚合查询流水线、TTL 清理任务、以及 RocksDB&#x2F;JRaft&#x2F;系统层指标采集等能力。</li>
 <li>向外提供了grpc(供内部组件使用)和一些Rest API(用户来管理节点)</li>
-<li>这个类不仅负责当前store实例中的raft peer的监控方法，还会负责将对应的grpc路由到正确的raft peer上。但是需要注意的是，raft peer的日志同步是由JRaft来负责的，而<strong>不是由这个类来负责</strong>的。<br> <img src="/2026/01/22/hg-store-node-note/muti-raft.png" srcset="/img/loading.gif" lazyload></li>
+<li>这个类不仅负责当前store实例中的raft peer的监控方法，还会负责将对应的grpc路由到正确的raft peer上。但是需要注意的是，raft peer的日志同步是由JRaft来负责的，而<strong>不是由这个类来负责</strong>的。</li>
 </ol>
+<p><img src="/2026/01/22/hg-store-node-note/muti-raft.png" srcset="/img/loading.gif" lazyload></p>
 <blockquote>
 <p>概括的来说：node包仅仅包含了当前store实例的peers的生命周期管理的Hook与任务提交的方法，并不负责底层的共识部分。</p>
 </blockquote>
 <h4 id="一些关键的包"><a href="#一些关键的包" class="headerlink" title="一些关键的包"></a>一些关键的包</h4><ul>
-<li><p>controller包<br>  包含了对外部提供的的Rest API，用于监控节点状态、节点信息等等</p>
-</li>
-<li><p>grpc包<br>  grpc是node模块最重要的包，<code>grpc/HgStoreNodeService.java</code>封装了<code>HgStoreEngine</code>(和底层存储交互)，以及<code>HgStoreSessionImpl</code>。其中<code>addRaftTask()</code>负责将Raft任务提交到对应Partition的Raft Group中，这里的<code>invoke()</code>方法会将涉及到 <em>Raft状态改变的操作</em>同步到各个的Raft Peer。一般的读请求在代码中也看不到(进一步证明了这段只是将状态同步到Raft Peer，而不是实际的读写处理，读写处理在先前core包下的<code>BussinessImpl</code>)。<br>  <img src="/2026/01/22/hg-store-node-note/request%E5%A4%84%E7%90%86.png" srcset="/img/loading.gif" lazyload><br>  同时如果当前的target peer不是leader，由底层的raft处理之后会通过Raft Closure返回<code>NOT_LEADER</code>的信息，让Client端进行选择另一store实例进行重试。</p>
-  <figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><code class="hljs java"><span class="hljs-keyword">switch</span> (methodId) &#123;<br>    <span class="hljs-keyword">case</span> HgStoreNodeService.BATCH_OP:<br>        hgStoreSession.doBatch(partId, (BatchReq) req, response);<br>        <span class="hljs-keyword">break</span>;<br>    <span class="hljs-keyword">case</span> HgStoreNodeService.TABLE_OP:<br>        hgStoreSession.doTable(partId, (TableReq) req, response);<br>        <span class="hljs-keyword">break</span>;<br>    <span class="hljs-keyword">case</span> HgStoreNodeService.GRAPH_OP:<br>        <span class="hljs-keyword">if</span> (((GraphReq) req).getMethod() == GRAPH_METHOD_DELETE) &#123;<br>            storeEngine.deletePartition(partId, ((GraphReq) req).getGraphName());<br>        &#125;<br>        hgStoreSession.doGraph(partId, (GraphReq) req, response);<br>        <span class="hljs-keyword">break</span>;<br>    <span class="hljs-keyword">case</span> HgStoreNodeService.CLEAN_OP:<br>        hgStoreSession.doClean(partId, (CleanReq) req, response);<br>        <span class="hljs-keyword">break</span>;<br>    <span class="hljs-keyword">case</span> HgStoreNodeService.TTL_CLEAN_OP:<br>        hgStoreSession.cleanTtl(partId, (TTLCleanRequest) req, response);<br>        <span class="hljs-keyword">break</span>;<br>    <span class="hljs-keyword">default</span>:<br>        <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>; <span class="hljs-comment">// Unhandled</span><br>&#125;<br><span class="hljs-keyword">return</span> <span class="hljs-literal">true</span>;<br></code></pre></td></tr></table></figure></li>
+<li>controller包<br>  包含了对外部提供的的Rest API，用于监控节点状态、节点信息等等</li>
+<li>grpc包<br>  grpc是node模块最重要的包，<code>grpc/HgStoreNodeService.java</code>封装了<code>HgStoreEngine</code>(和底层存储交互)，以及<code>HgStoreSessionImpl</code>。其中<code>addRaftTask()</code>负责将Raft任务提交到对应Partition的Raft Group中，这里的<code>invoke()</code>方法会将涉及到 <em>Raft状态改变的操作</em>同步到各个的Raft Peer。一般的读请求在代码中也看不到(进一步证明了这段只是将状态同步到Raft Peer，而不是实际的读写处理，读写处理在先前core包下的<code>BussinessImpl</code>)。</li>
+</ul>
+<p><img src="/2026/01/22/hg-store-node-note/request%E5%A4%84%E7%90%86.png" srcset="/img/loading.gif" lazyload></p>
+<pre><code class="hljs">同时如果当前的target peer不是leader，由底层的raft处理之后会通过Raft Closure返回`NOT_LEADER`的信息，让Client端进行选择另一store实例进行重试。
+
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><code class="hljs java"><span class="hljs-keyword">switch</span> (methodId) &#123;<br>    <span class="hljs-keyword">case</span> HgStoreNodeService.BATCH_OP:<br>        hgStoreSession.doBatch(partId, (BatchReq) req, response);<br>        <span class="hljs-keyword">break</span>;<br>    <span class="hljs-keyword">case</span> HgStoreNodeService.TABLE_OP:<br>        hgStoreSession.doTable(partId, (TableReq) req, response);<br>        <span class="hljs-keyword">break</span>;<br>    <span class="hljs-keyword">case</span> HgStoreNodeService.GRAPH_OP:<br>        <span class="hljs-keyword">if</span> (((GraphReq) req).getMethod() == GRAPH_METHOD_DELETE) &#123;<br>            storeEngine.deletePartition(partId, ((GraphReq) req).getGraphName());<br>        &#125;<br>        hgStoreSession.doGraph(partId, (GraphReq) req, response);<br>        <span class="hljs-keyword">break</span>;<br>    <span class="hljs-keyword">case</span> HgStoreNodeService.CLEAN_OP:<br>        hgStoreSession.doClean(partId, (CleanReq) req, response);<br>        <span class="hljs-keyword">break</span>;<br>    <span class="hljs-keyword">case</span> HgStoreNodeService.TTL_CLEAN_OP:<br>        hgStoreSession.cleanTtl(partId, (TTLCleanRequest) req, response);<br>        <span class="hljs-keyword">break</span>;<br>    <span class="hljs-keyword">default</span>:<br>        <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>; <span class="hljs-comment">// Unhandled</span><br>&#125;<br><span class="hljs-keyword">return</span> <span class="hljs-literal">true</span>;<br></code></pre></td></tr></table></figure>
+</code></pre>
+<ul>
 <li><p>另外还有3.7中新增的一个子包<code>task</code>,包含了几个新增的类<code>DefaulTaskSubmitter</code>、<code>RaftTaskSubmitter</code>、<code>TaskInfo</code>、<code>TaskSubmitter</code>以及<code>TtlCleaner</code>。</p>
 <blockquote>
 <p><code>TtlCleaner</code>在<code>run()</code>的时候都做了什么事？</p>
@@ -353,7 +359,7 @@
 
   <div class="license-box my-3">
     <div class="license-title">
-      <div>hg-store-node阅读笔记</div>
+      <div>hg-store-node-note</div>
       <div>http://example.com/2026/01/22/hg-store-node-note/</div>
     </div>
     <div class="license-meta">
