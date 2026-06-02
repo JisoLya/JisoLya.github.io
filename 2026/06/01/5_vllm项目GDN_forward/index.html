@@ -19,21 +19,24 @@
   <meta name="author" content="Soya">
   <meta name="keywords" content="">
   
-    <meta name="description" content="FA2与Flash Decoding在学习LLM Infer的时候，总是会提到FLash_Decoding这个概念，这里对比一下FA2和Flash_Decoding(FD)的一点区别。 FlashAttention2在学习了Flash Attention V1的过程中，FA的矩阵遍历顺序是外层遍历KV， 内部依次遍历Q tile，那么这样会带来一个问题，在计算Attention的时候，最后其实是要">
+    <meta name="description" content="vllm-GDN-forward简单记录一下vllm对于GDN模型的优化，下边这里是来自Qwen3-Next模型的GDN部分的结构： QKV-Proj和nano-vllm中qkv的行为一直，可以看到图中的hidden_state分别经过了6个linear，这里也采用了一个增加吞吐量的手段，即这几个linear层被合并成了一个，去看模型safetensors文件发现他是这样保存的。 12model.">
 <meta property="og:type" content="article">
-<meta property="og:title" content="Welcome to my blog!">
-<meta property="og:url" content="http://example.com/2026/06/02/FA2%E4%B8%8EFlash_Decoding/index.html">
+<meta property="og:title" content="vllm-GDN-forward">
+<meta property="og:url" content="http://example.com/2026/06/01/5_vllm%E9%A1%B9%E7%9B%AEGDN_forward/index.html">
 <meta property="og:site_name" content="Welcome to my blog!">
-<meta property="og:description" content="FA2与Flash Decoding在学习LLM Infer的时候，总是会提到FLash_Decoding这个概念，这里对比一下FA2和Flash_Decoding(FD)的一点区别。 FlashAttention2在学习了Flash Attention V1的过程中，FA的矩阵遍历顺序是外层遍历KV， 内部依次遍历Q tile，那么这样会带来一个问题，在计算Attention的时候，最后其实是要">
+<meta property="og:description" content="vllm-GDN-forward简单记录一下vllm对于GDN模型的优化，下边这里是来自Qwen3-Next模型的GDN部分的结构： QKV-Proj和nano-vllm中qkv的行为一直，可以看到图中的hidden_state分别经过了6个linear，这里也采用了一个增加吞吐量的手段，即这几个linear层被合并成了一个，去看模型safetensors文件发现他是这样保存的。 12model.">
 <meta property="og:locale" content="zh_CN">
-<meta property="article:published_time" content="2026-06-02T10:52:52.550Z">
-<meta property="article:modified_time" content="2026-06-02T10:48:41.229Z">
+<meta property="og:image" content="http://example.com/2026/06/01/5_vllm%E9%A1%B9%E7%9B%AEGDN_forward/archtecture.png">
+<meta property="article:published_time" content="2026-06-01T12:51:10.000Z">
+<meta property="article:modified_time" content="2026-06-02T10:56:02.230Z">
 <meta property="article:author" content="Soya">
+<meta property="article:tag" content="vllm">
 <meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="http://example.com/2026/06/01/5_vllm%E9%A1%B9%E7%9B%AEGDN_forward/archtecture.png">
   
   
   
-  <title>Welcome to my blog!</title>
+  <title>vllm-GDN-forward - Welcome to my blog!</title>
 
   <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
 
@@ -212,7 +215,7 @@
       <div class="banner-text text-center fade-in-up">
         <div class="h2">
           
-            <span id="subtitle" data-typed-text=""></span>
+            <span id="subtitle" data-typed-text="vllm-GDN-forward"></span>
           
         </div>
 
@@ -223,8 +226,8 @@
     
       <span class="post-meta">
         <i class="iconfont icon-date-fill" aria-hidden="true"></i>
-        <time datetime="2026-06-02 18:52" pubdate>
-          2026年6月2日 晚上
+        <time datetime="2026-06-01 20:51" pubdate>
+          2026年6月1日 晚上
         </time>
       </span>
     
@@ -235,7 +238,7 @@
       <span class="post-meta mr-2">
         <i class="iconfont icon-chart"></i>
         
-          814 字
+          284 字
         
       </span>
     
@@ -246,7 +249,7 @@
         
         
         
-          7 分钟
+          3 分钟
         
       </span>
     
@@ -292,26 +295,21 @@
       <div class="container nopadding-x-md" id="board-ctn">
         <div id="board">
           <article class="post-content mx-auto">
-            <h1 id="seo-header"></h1>
+            <h1 id="seo-header">vllm-GDN-forward</h1>
             
             
               <div class="markdown-body">
                 
-                <h1 id="FA2与Flash-Decoding"><a href="#FA2与Flash-Decoding" class="headerlink" title="FA2与Flash Decoding"></a>FA2与Flash Decoding</h1><p>在学习LLM Infer的时候，总是会提到FLash_Decoding这个概念，这里对比一下FA2和Flash_Decoding(FD)的一点区别。</p>
-<h2 id="FlashAttention2"><a href="#FlashAttention2" class="headerlink" title="FlashAttention2"></a>FlashAttention2</h2><p>在学习了Flash Attention V1的过程中，FA的矩阵遍历顺序是外层遍历KV， 内部依次遍历Q tile，那么这样会带来一个问题，在计算Attention的时候，最后其实是要得到一个与Q维度相同的output，那么FA的问题：</p>
-<blockquote>
-<p>在内层遍历Q的时候(此时这个Q会被拆分为<code>[Q_tile1, Q_tile2...]</code>)，每个Block需要依次的更新<code>Out[tile1], Out[tile2] ...</code>,这样在写入的时候，每一个block就丧失了一定并行度，因为写入需要按顺序写。</p>
-</blockquote>
-<p>FA2就解决的FA1的这个问题，FA2将循环的步骤变为了外层循环Q，内部循环KV，这样每一个block就不存在写冲突，每一个block只需要更新自身的。</p>
-<blockquote>
-<p>用“循环”来表达似乎不太准确，这里用triton kernel的grid来表达更准确一些</p>
-</blockquote>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br></pre></td><td class="code"><pre><code class="hljs python"><br><span class="hljs-comment"># FA的grid形式,一个program负责某个batch的某一个head</span><br>grid_fa1 = (batch_size, head_num)<br><br><span class="hljs-comment"># 在kernel 内部</span><br><span class="hljs-keyword">for</span> start_m <span class="hljs-keyword">in</span> <span class="hljs-built_in">range</span>(<span class="hljs-number">0</span>, q_len, BLOCK_M):<br>    ...<br><br><span class="hljs-comment"># FA2的grid形式像是这样的kernel，一个program负责一整块Q矩阵的一小部分</span><br>grid_fa2 = (batch_size, cdiv(query_seq_len, BLOCK_SIZE_M), head_num)<br><br><span class="hljs-meta">@triton.jit</span><br><span class="hljs-keyword">def</span> <span class="hljs-title function_">flash_attn_2_fwd_kernel</span>(<span class="hljs-params"></span><br><span class="hljs-params">    Q, K, V, ...</span><br><span class="hljs-params"></span>):<br>    <span class="hljs-comment"># 1. 获取当前 Block 在 Grid 中的空间位置</span><br>    pid_m = tl.program_id(<span class="hljs-number">0</span>)      <span class="hljs-comment"># Q 块的索引 (Decode 时为 0)</span><br>    pid_bh = tl.program_id(<span class="hljs-number">1</span>)     <span class="hljs-comment"># Batch 索引</span><br>    pid_h = tl.program_id(<span class="hljs-number">2</span>)      <span class="hljs-comment"># Head 索引</span><br><br>    <span class="hljs-comment"># 2. 定位到当前 Head 对应的 Q 向量指针</span><br>    <span class="hljs-comment"># 每个 Block 独占一个特定的 Batch 和 Head</span><br>    q_ptr = Q + pid_bh * stride_qb + pid_h * stride_qh<br><br>    <span class="hljs-comment"># 3. 在这个 Block（SM）内部，用指针循环去【串行】遍历所有的 KV 块</span><br>    <span class="hljs-keyword">for</span> start_n <span class="hljs-keyword">in</span> <span class="hljs-built_in">range</span>(<span class="hljs-number">0</span>, KV_LEN, BLOCK_N):<br>        k_ptr = K + start_n * stride_kn + ...<br>        v_ptr = V + start_n * stride_vn + ...<br>        <br>        <span class="hljs-comment"># 加载 KV 块到片上 SRAM</span><br>        k = tl.load(k_ptr)<br>        v = tl.load(v_ptr)<br>        <br>        <span class="hljs-comment"># 在计算单元内部迭代更新 Online Softmax 局部结果</span><br>        ...<br></code></pre></td></tr></table></figure>
-
-<p>那么看到FA2的这个grid形式，在Prefill阶段并没有什么问题，但是在Decode阶段，这里的<code>query_seq_len === 1</code>，这样子就退化到了普通了FA，也就失去了FA2的并行度。也就是为什么会提出FD了。</p>
-<h2 id="FlashDecoding"><a href="#FlashDecoding" class="headerlink" title="FlashDecoding"></a>FlashDecoding</h2><p>与FA2对于FA的优化方法类似，在Decode的过程中，哪一个数据可以进一步Split呢？也就只有KV Cache了，在进行split之前，需要注意一个问题，在Online Softmax的时候(看FA2的kernel)，我们需要保存每一个<code>BLOCK_N</code>长度块内部的局部最大值以及一个指数结果(可以看这个<a target="_blank" rel="noopener" href="https://www.bilibili.com/video/BV1FM9XYoEQ5/?spm_id_from=333.337.search-card.all.click&vd_source=f3410ba004edb27248c732e3b1bcae06">视频</a>这个解释了online softmax)</p>
-<p>为了解决这个不同的program就需要从HBM中读取局部值，所以我们在切分KV的时候，需要将局部最值&#x2F;指数计算结果写入一次HBM。</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><code class="hljs python"><span class="hljs-comment"># Flash Decoding的grid形式</span><br>grid = (batch_size, head_num, n_splits)<br><br><span class="hljs-meta">@triton.jit</span><br><span class="hljs-keyword">def</span> <span class="hljs-title function_">flash_decoding_fwd_kernel</span>(<span class="hljs-params"></span><br><span class="hljs-params">    Q, K, V, Output_Splits, Logsumexp_Splits, ...</span><br><span class="hljs-params"></span>):<br>    <span class="hljs-comment"># 1. 获取当前 Block 的位置</span><br>    pid_b = tl.program_id(<span class="hljs-number">0</span>)      <span class="hljs-comment"># Batch 索引</span><br>    pid_h = tl.program_id(<span class="hljs-number">1</span>)      <span class="hljs-comment"># Head 索引</span><br>    pid_split = tl.program_id(<span class="hljs-number">2</span>)  <span class="hljs-comment"># 当前这个 SM 负责的 KV 切片索引</span><br><br>    <span class="hljs-comment"># 2. 计算当前 split 负责的 KV 范围</span><br>    kv_per_split = KV_LEN // NUM_SPLITS<br>    start_kv_idx = pid_split * kv_per_split<br>    end_kv_idx = start_kv_idx + kv_per_split<br><br>    <span class="hljs-comment"># 3. 现在的循环变短了，只遍历自己分到的那一小段 KV</span><br>    <span class="hljs-keyword">for</span> start_n <span class="hljs-keyword">in</span> <span class="hljs-built_in">range</span>(start_kv_idx, end_kv_idx, BLOCK_N):<br>        k = tl.load(K + start_n * ...)<br>        v = tl.load(V + start_n * ...)<br>        <span class="hljs-comment"># 计算局部 Attention</span><br>        ...<br>        <br>    <span class="hljs-comment"># 4. 因为是并行计算，算完后不能直接当作最终结果</span><br>    <span class="hljs-comment"># 必须把每个 split 的局部输出和 Softmax 分母（Logsumexp）写回全局显存（HBM）</span><br>    tl.store(Output_Splits + pid_b*... + pid_h*... + pid_split*..., local_out)<br>    tl.store(Logsumexp_Splits + pid_b*... + pid_h*... + pid_split*..., local_lse)<br></code></pre></td></tr></table></figure>
+                <h1 id="vllm-GDN-forward"><a href="#vllm-GDN-forward" class="headerlink" title="vllm-GDN-forward"></a>vllm-GDN-forward</h1><p>简单记录一下vllm对于GDN模型的优化，下边这里是来自Qwen3-Next模型的GDN部分的结构：<br><img src="/2026/06/01/5_vllm%E9%A1%B9%E7%9B%AEGDN_forward/archtecture.png" srcset="/img/loading.gif" lazyload></p>
+<h2 id="QKV-Proj"><a href="#QKV-Proj" class="headerlink" title="QKV-Proj"></a>QKV-Proj</h2><p>和nano-vllm中qkv的行为一直，可以看到图中的hidden_state分别经过了6个linear，这里也采用了一个增加吞吐量的手段，即这几个linear层被合并成了一个，去看模型safetensors文件发现他是这样保存的。</p>
+<figure class="highlight stylus"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><code class="hljs stylus">model<span class="hljs-selector-class">.layers</span>.<span class="hljs-number">0</span><span class="hljs-selector-class">.linear_attn</span><span class="hljs-selector-class">.in_proj_qkvz</span><span class="hljs-selector-class">.weight</span><br>model<span class="hljs-selector-class">.layers</span>.<span class="hljs-number">0</span><span class="hljs-selector-class">.linear_attn</span><span class="hljs-selector-class">.in_proj_ba</span>.weight<br></code></pre></td></tr></table></figure>
+<p>直接把hidden_state乘这个复合大矩阵，分别得到卷积前的$ q,k,\alpha,\beta,z $</p>
+<p>执行gate(alpha)</p>
+<figure class="highlight isbl"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><code class="hljs isbl"><span class="hljs-variable">x</span> = <span class="hljs-variable">a</span> + <span class="hljs-variable">dt_bias</span><br><span class="hljs-function"><span class="hljs-title">softplus</span>(<span class="hljs-variable">x</span>) = <span class="hljs-title">log</span>(<span class="hljs-number">1</span> + <span class="hljs-title">exp</span>(<span class="hljs-variable">x</span>))</span><br><span class="hljs-variable">g</span> = -<span class="hljs-function"><span class="hljs-title">exp</span>(<span class="hljs-variable">A_log</span>) * <span class="hljs-title">softplus</span>(<span class="hljs-variable">x</span>)</span><br><span class="hljs-variable">beta</span> = <span class="hljs-function"><span class="hljs-title">sigmoid</span>(<span class="hljs-variable">b</span>)</span><br></code></pre></td></tr></table></figure>
+<p>得到了prepare后的q&#x2F;k&#x2F;gate&#x2F;beta后，根据prefill阶段与decode阶段的不同：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><code class="hljs python"><span class="hljs-comment"># prefill阶段</span><br>  core_attn_out, last_state = <span class="hljs-variable language_">self</span>.chunk_gated_delta_rule(<br>      q, k, v, g, beta,<br>      initial_state=ssm_state,<br>      output_final_state=<span class="hljs-literal">True</span>,<br>      cu_seqlens=non_spec_query_start_loc,<br>      chunk_indices=chunk_indices,<br>      ...<br>  )<br>  ssm_state[...] = last_state  <span class="hljs-comment"># 写回 KV cache</span><br><br>  <span class="hljs-comment"># docode阶段</span><br>    core_attn_out, last_state = fused_sigmoid_gating_delta_rule_update(<br>      A_log=<span class="hljs-variable language_">self</span>.A_log, a=a, b=b, dt_bias=<span class="hljs-variable language_">self</span>.dt_bias,<br>      q=q, k=k, v=v,<br>      initial_state=ssm_state,<br>      inplace_final_state=<span class="hljs-literal">True</span>,<br>      cu_seqlens=...,<br>      ssm_state_indices=...,<br>  )<br></code></pre></td></tr></table></figure>
+<p>最后就是</p>
+<figure class="highlight erlang"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><code class="hljs erlang"><span class="hljs-function"><span class="hljs-title">core_attn_out</span>  <span class="hljs-params">(SSM 输出, [L, HV, head_v_dim])</span></span><br><span class="hljs-function">      │</span><br><span class="hljs-function">      ▼</span><br><span class="hljs-function">RMSN<span class="hljs-title">ormGated</span><span class="hljs-params">(core_attn_out, z)</span></span><br><span class="hljs-function">  = RMSN<span class="hljs-title">orm</span><span class="hljs-params">(core_attn_out)</span> * S<span class="hljs-title">iLU</span><span class="hljs-params">(z)</span></span><br><span class="hljs-function">      │</span><br><span class="hljs-function">      ▼ <span class="hljs-title">reshape</span></span><br><span class="hljs-function">      │</span><br><span class="hljs-function"> <span class="hljs-title">out_proj</span> ────→ <span class="hljs-title">hidden_size</span></span><br><span class="hljs-function"></span><br><span class="hljs-function">与标准 M<span class="hljs-title">amba</span> 输出公式的对应</span><br><span class="hljs-function"></span><br><span class="hljs-function">标准 M<span class="hljs-title">amba</span> 的输出公式是：</span><br><span class="hljs-function"></span><br><span class="hljs-function"><span class="hljs-title">output</span> = RMSN<span class="hljs-title">orm</span><span class="hljs-params">(x)</span> * S<span class="hljs-title">iLU</span><span class="hljs-params">(z)</span>        ← SSM 贡献（受 <span class="hljs-title">z</span> 门控）</span><br></code></pre></td></tr></table></figure>
 
                 
               </div>
@@ -321,6 +319,13 @@
               <div class="post-metas my-3">
   
   
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/vllm/" class="print-no-link">#vllm</a>
+      
+    </div>
+  
 </div>
 
 
@@ -329,8 +334,8 @@
 
   <div class="license-box my-3">
     <div class="license-title">
-      <div></div>
-      <div>http://example.com/2026/06/02/FA2与Flash_Decoding/</div>
+      <div>vllm-GDN-forward</div>
+      <div>http://example.com/2026/06/01/5_vllm项目GDN_forward/</div>
     </div>
     <div class="license-meta">
       
@@ -342,7 +347,7 @@
       
         <div class="license-meta-item license-meta-date">
           <div>发布于</div>
-          <div>2026年6月2日</div>
+          <div>2026年6月1日</div>
         </div>
       
       
@@ -378,8 +383,8 @@
                   <article class="post-next col-6">
                     
                     
-                      <a href="/2026/06/02/5_vllm%E9%A1%B9%E7%9B%AEGDN_forward/" title="">
-                        <span class="hidden-mobile"></span>
+                      <a href="/2026/06/01/4_vllm%E7%9A%84kv_cahce_manager/" title="vllm的kv_cache_manager">
+                        <span class="hidden-mobile">vllm的kv_cache_manager</span>
                         <span class="visible-mobile">下一篇</span>
                         <i class="iconfont icon-arrowright"></i>
                       </a>

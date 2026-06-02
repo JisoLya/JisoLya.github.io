@@ -242,46 +242,13 @@
     <article class="col-12 col-md-12 mx-auto index-info">
       <h2 class="index-header">
         
-        <a href="/2026/06/02/FA2%E4%B8%8EFlash_Decoding/" target="_self">
-          
+        <a href="/2026/06/01/5_vllm%E9%A1%B9%E7%9B%AEGDN_forward/" target="_self">
+          vllm-GDN-forward
         </a>
       </h2>
 
       
-      <a class="index-excerpt index-excerpt__noimg" href="/2026/06/02/FA2%E4%B8%8EFlash_Decoding/" target="_self">
-        <div>
-          FA2与Flash Decoding在学习LLM Infer的时候，总是会提到FLash_Decoding这个概念，这里对比一下FA2和Flash_Decoding(FD)的一点区别。 FlashAttention2在学习了Flash Attention V1的过程中，FA的矩阵遍历顺序是外层遍历KV， 内部依次遍历Q tile，那么这样会带来一个问题，在计算Attention的时候，最后其实是要
-        </div>
-      </a>
-
-      <div class="index-btm post-metas">
-        
-          <div class="post-meta mr-3">
-            <i class="iconfont icon-date"></i>
-            <time datetime="2026-06-02 18:52" pubdate>
-              2026-06-02
-            </time>
-          </div>
-        
-        
-        
-      </div>
-    </article>
-  </div>
-
-  <div class="row mx-auto index-card">
-    
-    
-    <article class="col-12 col-md-12 mx-auto index-info">
-      <h2 class="index-header">
-        
-        <a href="/2026/06/02/5_vllm%E9%A1%B9%E7%9B%AEGDN_forward/" target="_self">
-          
-        </a>
-      </h2>
-
-      
-      <a class="index-excerpt index-excerpt__noimg" href="/2026/06/02/5_vllm%E9%A1%B9%E7%9B%AEGDN_forward/" target="_self">
+      <a class="index-excerpt index-excerpt__noimg" href="/2026/06/01/5_vllm%E9%A1%B9%E7%9B%AEGDN_forward/" target="_self">
         <div>
           vllm-GDN-forward简单记录一下vllm对于GDN模型的优化，下边这里是来自Qwen3-Next模型的GDN部分的结构： QKV-Proj和nano-vllm中qkv的行为一直，可以看到图中的hidden_state分别经过了6个linear，这里也采用了一个增加吞吐量的手段，即这几个linear层被合并成了一个，去看模型safetensors文件发现他是这样保存的。 12model.
         </div>
@@ -291,12 +258,19 @@
         
           <div class="post-meta mr-3">
             <i class="iconfont icon-date"></i>
-            <time datetime="2026-06-02 18:42" pubdate>
-              2026-06-02
+            <time datetime="2026-06-01 20:51" pubdate>
+              2026-06-01
             </time>
           </div>
         
         
+        
+          <div class="post-meta">
+            <i class="iconfont icon-tags"></i>
+            
+              <a href="/tags/vllm/">#vllm</a>
+            
+          </div>
         
       </div>
     </article>
@@ -308,13 +282,13 @@
     <article class="col-12 col-md-12 mx-auto index-info">
       <h2 class="index-header">
         
-        <a href="/2026/06/02/4_vllm%E7%9A%84kv_cahce_manager/" target="_self">
-          
+        <a href="/2026/06/01/4_vllm%E7%9A%84kv_cahce_manager/" target="_self">
+          vllm的kv_cache_manager
         </a>
       </h2>
 
       
-      <a class="index-excerpt index-excerpt__noimg" href="/2026/06/02/4_vllm%E7%9A%84kv_cahce_manager/" target="_self">
+      <a class="index-excerpt index-excerpt__noimg" href="/2026/06/01/4_vllm%E7%9A%84kv_cahce_manager/" target="_self">
         <div>
           vllm的kv_cache_manager allocate_slots()在先前的schedule()中执行请求的踢出&#x2F;加入前，kv_cache_manager首先根据request的new_tokens信息尝试分配新的显存block，本节主要看一下这个kv_cache_manager都做了什么事情。 12345new_blocks = self.kv_cache_manager.al
         </div>
@@ -324,12 +298,19 @@
         
           <div class="post-meta mr-3">
             <i class="iconfont icon-date"></i>
-            <time datetime="2026-06-02 18:42" pubdate>
-              2026-06-02
+            <time datetime="2026-06-01 20:51" pubdate>
+              2026-06-01
             </time>
           </div>
         
         
+        
+          <div class="post-meta">
+            <i class="iconfont icon-tags"></i>
+            
+              <a href="/tags/vllm/">#vllm</a>
+            
+          </div>
         
       </div>
     </article>
@@ -341,13 +322,13 @@
     <article class="col-12 col-md-12 mx-auto index-info">
       <h2 class="index-header">
         
-        <a href="/2026/06/02/2_vllm%E7%9A%84scheduler/" target="_self">
-          
+        <a href="/2026/06/01/2_vllm%E7%9A%84scheduler/" target="_self">
+          vllm的scheduler
         </a>
       </h2>
 
       
-      <a class="index-excerpt index-excerpt__noimg" href="/2026/06/02/2_vllm%E7%9A%84scheduler/" target="_self">
+      <a class="index-excerpt index-excerpt__noimg" href="/2026/06/01/2_vllm%E7%9A%84scheduler/" target="_self">
         <div>
           vllm的scheduler经过前面LLM启动流程源码阅读，知道了实际的token处理是在EngineCore的scheduler中被一个个调度的，今天来看一下Scheduler.schedule方法的具体逻辑。 Scheduler在process_engine_step()中，内部调用了scheduler的schedule()方法，schedule()中处理了一个个实际的request，在sch
         </div>
@@ -357,12 +338,139 @@
         
           <div class="post-meta mr-3">
             <i class="iconfont icon-date"></i>
-            <time datetime="2026-06-02 18:42" pubdate>
-              2026-06-02
+            <time datetime="2026-06-01 20:51" pubdate>
+              2026-06-01
             </time>
           </div>
         
         
+        
+          <div class="post-meta">
+            <i class="iconfont icon-tags"></i>
+            
+              <a href="/tags/vllm/">#vllm</a>
+            
+          </div>
+        
+      </div>
+    </article>
+  </div>
+
+  <div class="row mx-auto index-card">
+    
+    
+    <article class="col-12 col-md-12 mx-auto index-info">
+      <h2 class="index-header">
+        
+        <a href="/2026/06/01/FA2%E4%B8%8EFlash_Decoding/" target="_self">
+          FA2与Flash Decoding
+        </a>
+      </h2>
+
+      
+      <a class="index-excerpt index-excerpt__noimg" href="/2026/06/01/FA2%E4%B8%8EFlash_Decoding/" target="_self">
+        <div>
+          FA2与Flash Decoding在学习LLM Infer的时候，总是会提到FLash_Decoding这个概念，这里对比一下FA2和Flash_Decoding(FD)的一点区别。 FlashAttention2在学习了Flash Attention V1的过程中，FA的矩阵遍历顺序是外层遍历KV， 内部依次遍历Q tile，那么这样会带来一个问题，在计算Attention的时候，最后其实是要
+        </div>
+      </a>
+
+      <div class="index-btm post-metas">
+        
+          <div class="post-meta mr-3">
+            <i class="iconfont icon-date"></i>
+            <time datetime="2026-06-01 20:51" pubdate>
+              2026-06-01
+            </time>
+          </div>
+        
+        
+        
+          <div class="post-meta">
+            <i class="iconfont icon-tags"></i>
+            
+              <a href="/tags/vllm/">#vllm</a>
+            
+          </div>
+        
+      </div>
+    </article>
+  </div>
+
+  <div class="row mx-auto index-card">
+    
+    
+    <article class="col-12 col-md-12 mx-auto index-info">
+      <h2 class="index-header">
+        
+        <a href="/2026/06/01/1_vllm%E5%90%AF%E5%8A%A8%E6%B5%81%E7%A8%8B/" target="_self">
+          vllm的启动流程
+        </a>
+      </h2>
+
+      
+      <a class="index-excerpt index-excerpt__noimg" href="/2026/06/01/1_vllm%E5%90%AF%E5%8A%A8%E6%B5%81%E7%A8%8B/" target="_self">
+        <div>
+          vllm的启动流程记录一下阅读源码时发现的问题  GPUModelRunner.py“FIXME(woosuk): Fix warmup for LoRA.”现在似乎这个model runner还没有对LoRA Adapter做Graph Capture  1. LLMEngine的初始化从一个/root/autodl-tmp/vllm/examples/basic/offline_inferen
+        </div>
+      </a>
+
+      <div class="index-btm post-metas">
+        
+          <div class="post-meta mr-3">
+            <i class="iconfont icon-date"></i>
+            <time datetime="2026-06-01 20:51" pubdate>
+              2026-06-01
+            </time>
+          </div>
+        
+        
+        
+          <div class="post-meta">
+            <i class="iconfont icon-tags"></i>
+            
+              <a href="/tags/vllm/">#vllm</a>
+            
+          </div>
+        
+      </div>
+    </article>
+  </div>
+
+  <div class="row mx-auto index-card">
+    
+    
+    <article class="col-12 col-md-12 mx-auto index-info">
+      <h2 class="index-header">
+        
+        <a href="/2026/06/01/3_vllm%E7%9A%84model_executor/" target="_self">
+          vllm的model_executor
+        </a>
+      </h2>
+
+      
+      <a class="index-excerpt index-excerpt__noimg" href="/2026/06/01/3_vllm%E7%9A%84model_executor/" target="_self">
+        <div>
+          vllm的model_executor经过前面scheduler一部分代码的解读，了解到scheduler会对当前的batch_requests打包成一整个SchedulerOutput传递给Engine中的ModelExecutor，本节我们继续沿着EngineCore中的step()方法进入模型推理阶段。 1future = self.model_executor.execute_model(
+        </div>
+      </a>
+
+      <div class="index-btm post-metas">
+        
+          <div class="post-meta mr-3">
+            <i class="iconfont icon-date"></i>
+            <time datetime="2026-06-01 20:51" pubdate>
+              2026-06-01
+            </time>
+          </div>
+        
+        
+        
+          <div class="post-meta">
+            <i class="iconfont icon-tags"></i>
+            
+              <a href="/tags/vllm/">#vllm</a>
+            
+          </div>
         
       </div>
     </article>
@@ -500,86 +608,6 @@
             <i class="iconfont icon-tags"></i>
             
               <a href="/tags/Transformer/">#Transformer</a>
-            
-          </div>
-        
-      </div>
-    </article>
-  </div>
-
-  <div class="row mx-auto index-card">
-    
-    
-    <article class="col-12 col-md-12 mx-auto index-info">
-      <h2 class="index-header">
-        
-        <a href="/2026/01/18/cuda%E5%AE%9E%E7%8E%B0%E6%95%B0%E7%BB%84%E5%B9%B6%E8%A1%8C%E6%B1%82%E5%92%8C/" target="_self">
-          CUDA实现并行求和
-        </a>
-      </h2>
-
-      
-      <a class="index-excerpt index-excerpt__noimg" href="/2026/01/18/cuda%E5%AE%9E%E7%8E%B0%E6%95%B0%E7%BB%84%E5%B9%B6%E8%A1%8C%E6%B1%82%E5%92%8C/" target="_self">
-        <div>
-          CUDA中的网格跨步循环参考 https://www.codeleading.com/article/6260306169/cuda中的kernel我们一般会这样写 12345__global__ void parallel_run(int n)&#123;    for(int i = threadIdx.x + blockIdx.x * blockDim.x;i &lt; n;i += blo
-        </div>
-      </a>
-
-      <div class="index-btm post-metas">
-        
-          <div class="post-meta mr-3">
-            <i class="iconfont icon-date"></i>
-            <time datetime="2026-01-18 20:51" pubdate>
-              2026-01-18
-            </time>
-          </div>
-        
-        
-        
-          <div class="post-meta">
-            <i class="iconfont icon-tags"></i>
-            
-              <a href="/tags/CUDA/">#CUDA</a>
-            
-          </div>
-        
-      </div>
-    </article>
-  </div>
-
-  <div class="row mx-auto index-card">
-    
-    
-    <article class="col-12 col-md-12 mx-auto index-info">
-      <h2 class="index-header">
-        
-        <a href="/2026/01/18/cuda%E5%85%B1%E4%BA%AB%E5%86%85%E5%AD%98/" target="_self">
-          CUDA共享内存
-        </a>
-      </h2>
-
-      
-      <a class="index-excerpt index-excerpt__noimg" href="/2026/01/18/cuda%E5%85%B1%E4%BA%AB%E5%86%85%E5%AD%98/" target="_self">
-        <div>
-          CUDA共享内存SM(Streaming Multiprocessors)与板块(block)在先前我们利用网格跨步循环实现了数组的加法，但是其中利用了atomicAdd()这样的原子化操作导致实际上每一个线程都是串行化进行了，并不能发挥GPU的并行计算能力。 如果不使用原子计算的方式，我们就要将sum变为数组，下边的这段代码每一个线程计算一段地址0-1023， 1024-2045 …，将求和的大
-        </div>
-      </a>
-
-      <div class="index-btm post-metas">
-        
-          <div class="post-meta mr-3">
-            <i class="iconfont icon-date"></i>
-            <time datetime="2026-01-18 20:51" pubdate>
-              2026-01-18
-            </time>
-          </div>
-        
-        
-        
-          <div class="post-meta">
-            <i class="iconfont icon-tags"></i>
-            
-              <a href="/tags/CUDA/">#CUDA</a>
             
           </div>
         

@@ -21,24 +21,25 @@
   
     <meta name="description" content="vllm的scheduler经过前面LLM启动流程源码阅读，知道了实际的token处理是在EngineCore的scheduler中被一个个调度的，今天来看一下Scheduler.schedule方法的具体逻辑。 Scheduler在process_engine_step()中，内部调用了scheduler的schedule()方法，schedule()中处理了一个个实际的request，在sch">
 <meta property="og:type" content="article">
-<meta property="og:title" content="Welcome to my blog!">
-<meta property="og:url" content="http://example.com/2026/06/02/2_vllm%E7%9A%84scheduler/index.html">
+<meta property="og:title" content="vllm的scheduler">
+<meta property="og:url" content="http://example.com/2026/06/01/2_vllm%E7%9A%84scheduler/index.html">
 <meta property="og:site_name" content="Welcome to my blog!">
 <meta property="og:description" content="vllm的scheduler经过前面LLM启动流程源码阅读，知道了实际的token处理是在EngineCore的scheduler中被一个个调度的，今天来看一下Scheduler.schedule方法的具体逻辑。 Scheduler在process_engine_step()中，内部调用了scheduler的schedule()方法，schedule()中处理了一个个实际的request，在sch">
 <meta property="og:locale" content="zh_CN">
-<meta property="og:image" content="http://example.com/2026/06/02/2_vllm%E7%9A%84scheduler/engine_core_scheduler.png">
-<meta property="og:image" content="http://example.com/2026/06/02/2_vllm%E7%9A%84scheduler/num_computed_tokens.png">
-<meta property="og:image" content="http://example.com/2026/06/02/2_vllm%E7%9A%84scheduler/process_requests.png">
-<meta property="og:image" content="http://example.com/2026/06/02/2_vllm%E7%9A%84scheduler/prefix_cache.png">
-<meta property="article:published_time" content="2026-06-02T10:42:26.991Z">
-<meta property="article:modified_time" content="2026-06-02T10:43:38.193Z">
+<meta property="og:image" content="http://example.com/2026/06/01/2_vllm%E7%9A%84scheduler/engine_core_scheduler.png">
+<meta property="og:image" content="http://example.com/2026/06/01/2_vllm%E7%9A%84scheduler/num_computed_tokens.png">
+<meta property="og:image" content="http://example.com/2026/06/01/2_vllm%E7%9A%84scheduler/process_requests.png">
+<meta property="og:image" content="http://example.com/2026/06/01/2_vllm%E7%9A%84scheduler/prefix_cache.png">
+<meta property="article:published_time" content="2026-06-01T12:51:10.000Z">
+<meta property="article:modified_time" content="2026-06-02T10:55:27.283Z">
 <meta property="article:author" content="Soya">
+<meta property="article:tag" content="vllm">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:image" content="http://example.com/2026/06/02/2_vllm%E7%9A%84scheduler/engine_core_scheduler.png">
+<meta name="twitter:image" content="http://example.com/2026/06/01/2_vllm%E7%9A%84scheduler/engine_core_scheduler.png">
   
   
   
-  <title>Welcome to my blog!</title>
+  <title>vllm的scheduler - Welcome to my blog!</title>
 
   <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
 
@@ -217,7 +218,7 @@
       <div class="banner-text text-center fade-in-up">
         <div class="h2">
           
-            <span id="subtitle" data-typed-text=""></span>
+            <span id="subtitle" data-typed-text="vllm的scheduler"></span>
           
         </div>
 
@@ -228,8 +229,8 @@
     
       <span class="post-meta">
         <i class="iconfont icon-date-fill" aria-hidden="true"></i>
-        <time datetime="2026-06-02 18:42" pubdate>
-          2026年6月2日 晚上
+        <time datetime="2026-06-01 20:51" pubdate>
+          2026年6月1日 晚上
         </time>
       </span>
     
@@ -297,19 +298,19 @@
       <div class="container nopadding-x-md" id="board-ctn">
         <div id="board">
           <article class="post-content mx-auto">
-            <h1 id="seo-header"></h1>
+            <h1 id="seo-header">vllm的scheduler</h1>
             
             
               <div class="markdown-body">
                 
                 <h1 id="vllm的scheduler"><a href="#vllm的scheduler" class="headerlink" title="vllm的scheduler"></a>vllm的scheduler</h1><p>经过前面LLM启动流程源码阅读，知道了实际的token处理是在EngineCore的scheduler中被一个个调度的，今天来看一下Scheduler.schedule方法的具体逻辑。</p>
-<h2 id="Scheduler"><a href="#Scheduler" class="headerlink" title="Scheduler"></a>Scheduler</h2><p>在<code>process_engine_step()</code>中，内部调用了scheduler的<code>schedule()</code>方法，schedule()中处理了一个个实际的request，在schedule中，优先处理处于running状态的请求(在online infer中，优先处理正在运行的请求，这样KV Cache也可以得到充分利用)。<br><img src="/2026/06/02/2_vllm%E7%9A%84scheduler/engine_core_scheduler.png" srcset="/img/loading.gif" lazyload></p>
+<h2 id="Scheduler"><a href="#Scheduler" class="headerlink" title="Scheduler"></a>Scheduler</h2><p>在<code>process_engine_step()</code>中，内部调用了scheduler的<code>schedule()</code>方法，schedule()中处理了一个个实际的request，在schedule中，优先处理处于running状态的请求(在online infer中，优先处理正在运行的请求，这样KV Cache也可以得到充分利用)。<br><img src="/2026/06/01/2_vllm%E7%9A%84scheduler/engine_core_scheduler.png" srcset="/img/loading.gif" lazyload></p>
 <p>在进入到<code>schedule()</code>方法之前，需要明确几个变量的含义：</p>
 <figure class="highlight livecodeserver"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><code class="hljs livecodeserver">num_tokens_with_spec -&gt; 当前需要模型处理的总<span class="hljs-keyword">token</span>数<br>num_tokens -&gt; 已确认的<span class="hljs-keyword">token</span>数（prompt+投机采样已接受的<span class="hljs-keyword">token</span>）<br>num_computed_tokens -&gt; 已经计算过的<span class="hljs-keyword">token</span>数<br>(例如输入prompt[<span class="hljs-number">1</span>,<span class="hljs-number">11</span>,<span class="hljs-number">3</span>], decode阶段输出了三个[<span class="hljs-number">4</span>,<span class="hljs-number">5</span>,<span class="hljs-number">6</span>],此时<span class="hljs-number">4</span>，<span class="hljs-number">5</span>为投机采样被接受的，<span class="hljs-number">6</span>是本轮decode的输出，这里只计算已经有KV Cache的<span class="hljs-keyword">token</span>数量)<br>request.num_output_placeholder -&gt; 异步调度中的占位符 (在同步调度中这个值始终为<span class="hljs-number">0</span>)<br>&gt;在异步调度中，scheduler不会等待上一个请求结束就会调度下一个，这里是对前一个请求输出的占位符<br>&gt;Q:如何确定前一个请求的输出大小呢？<br><br>num_tokens_with_spec = <span class="hljs-built_in">len</span>(prompt_token_ids) + <span class="hljs-built_in">len</span>(output_token_ids) + <span class="hljs-built_in">len</span>(spec_token_ids)<br></code></pre></td></tr></table></figure>
 <p>下边是一段<code>schedule()</code>方法的源代码</p>
 <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br><span class="line">130</span><br><span class="line">131</span><br><span class="line">132</span><br><span class="line">133</span><br><span class="line">134</span><br><span class="line">135</span><br><span class="line">136</span><br><span class="line">137</span><br><span class="line">138</span><br><span class="line">139</span><br><span class="line">140</span><br><span class="line">141</span><br><span class="line">142</span><br><span class="line">143</span><br><span class="line">144</span><br><span class="line">145</span><br><span class="line">146</span><br><span class="line">147</span><br><span class="line">148</span><br><span class="line">149</span><br></pre></td><td class="code"><pre><code class="hljs python"><span class="hljs-keyword">def</span> <span class="hljs-title function_">schedule</span>(<span class="hljs-params">self</span>) -&gt; SchedulerOutput:<br>    ...一些变量准备<br>    <span class="hljs-comment"># First, schedule the RUNNING requests.</span><br>    req_index = <span class="hljs-number">0</span><br>    <span class="hljs-keyword">while</span> req_index &lt; <span class="hljs-built_in">len</span>(<span class="hljs-variable language_">self</span>.running) <span class="hljs-keyword">and</span> token_budget &gt; <span class="hljs-number">0</span>:<br>        request = <span class="hljs-variable language_">self</span>.running[req_index]<br><br>        <span class="hljs-keyword">if</span> (<br>            request.num_output_placeholders &gt; <span class="hljs-number">0</span><br>            <span class="hljs-keyword">and</span> request.num_computed_tokens + <span class="hljs-number">2</span> - request.num_output_placeholders<br>            &gt;= request.num_prompt_tokens + request.max_tokens<br>        ):<br>            req_index += <span class="hljs-number">1</span><br>            <span class="hljs-keyword">continue</span><br><br>        num_new_tokens = (<br>            request.num_tokens_with_spec<br>            + request.num_output_placeholders<br>            - request.num_computed_tokens<br>        )<br>        <span class="hljs-keyword">if</span> <span class="hljs-number">0</span> &lt; <span class="hljs-variable language_">self</span>.scheduler_config.long_prefill_token_threshold &lt; num_new_tokens:<br>            num_new_tokens = <span class="hljs-variable language_">self</span>.scheduler_config.long_prefill_token_threshold<br>        num_new_tokens = <span class="hljs-built_in">min</span>(num_new_tokens, token_budget)<br><br>        <span class="hljs-comment"># Make sure the input position does not exceed the max model len.</span><br>        <span class="hljs-comment"># This is necessary when using spec decoding.</span><br>        num_new_tokens = <span class="hljs-built_in">min</span>(<br>            num_new_tokens, <span class="hljs-variable language_">self</span>.max_model_len - <span class="hljs-number">1</span> - request.num_computed_tokens<br>        )<br><br>        <span class="hljs-comment"># Schedule encoder inputs.</span><br>        encoder_inputs_to_schedule = <span class="hljs-literal">None</span><br>        external_load_encoder_input: <span class="hljs-built_in">list</span>[<span class="hljs-built_in">int</span>] = []<br>        new_encoder_compute_budget = encoder_compute_budget<br>        <span class="hljs-keyword">if</span> request.has_encoder_inputs:<br>            (<br>                encoder_inputs_to_schedule,<br>                num_new_tokens,<br>                new_encoder_compute_budget,<br>                external_load_encoder_input,<br>            ) = <span class="hljs-variable language_">self</span>._try_schedule_encoder_inputs(<br>                request,<br>                request.num_computed_tokens,<br>                num_new_tokens,<br>                encoder_compute_budget,<br>                shift_computed_tokens=<span class="hljs-number">1</span> <span class="hljs-keyword">if</span> <span class="hljs-variable language_">self</span>.use_eagle <span class="hljs-keyword">else</span> <span class="hljs-number">0</span>,<br>            )<br><br>        <span class="hljs-keyword">if</span> <span class="hljs-variable language_">self</span>.need_mamba_block_aligned_split:<br>            num_new_tokens = <span class="hljs-variable language_">self</span>._mamba_block_aligned_split(<br>                request, num_new_tokens<br>            )<br><br>        <span class="hljs-keyword">if</span> num_new_tokens == <span class="hljs-number">0</span>:<br>            req_index += <span class="hljs-number">1</span><br>            <span class="hljs-keyword">continue</span><br>        <br>        <span class="hljs-keyword">with</span> record_function_or_nullcontext(<span class="hljs-string">&quot;schedule: allocate_slots&quot;</span>):<br>            <span class="hljs-keyword">while</span> <span class="hljs-literal">True</span>:<br>                new_blocks = <span class="hljs-variable language_">self</span>.kv_cache_manager.allocate_slots(<br>                    request,<br>                    num_new_tokens,<br>                    num_lookahead_tokens=<span class="hljs-variable language_">self</span>.num_lookahead_tokens,<br>                )<br><br>                <span class="hljs-keyword">if</span> new_blocks <span class="hljs-keyword">is</span> <span class="hljs-keyword">not</span> <span class="hljs-literal">None</span>:<br>                    <span class="hljs-comment"># The request can be scheduled.</span><br>                    <span class="hljs-keyword">break</span><br><br>                <span class="hljs-comment"># The request cannot be scheduled.</span><br>                <span class="hljs-comment"># Preempt the lowest-priority request.</span><br>                <span class="hljs-keyword">if</span> <span class="hljs-variable language_">self</span>.policy == SchedulingPolicy.PRIORITY:<br>                    preempted_req = <span class="hljs-built_in">max</span>(<br>                        <span class="hljs-variable language_">self</span>.running,<br>                        key=<span class="hljs-keyword">lambda</span> r: (r.priority, r.arrival_time),<br>                    )<br>                    <span class="hljs-variable language_">self</span>.running.remove(preempted_req)<br>                    <span class="hljs-keyword">if</span> preempted_req <span class="hljs-keyword">in</span> scheduled_running_reqs:<br>                        preempted_req_id = preempted_req.request_id<br>                        scheduled_running_reqs.remove(preempted_req)<br>                        token_budget += num_scheduled_tokens.pop(preempted_req_id)<br>                        req_to_new_blocks.pop(preempted_req_id)<br>                        scheduled_spec_decode_tokens.pop(preempted_req_id, <span class="hljs-literal">None</span>)<br>                        preempted_encoder_inputs = scheduled_encoder_inputs.pop(<br>                            preempted_req_id, <span class="hljs-literal">None</span><br>                        )<br>                        <span class="hljs-keyword">if</span> preempted_encoder_inputs:<br>                            <span class="hljs-comment"># Restore encoder compute budget if the preempted</span><br>                            <span class="hljs-comment"># request had encoder inputs scheduled in this step.</span><br>                            num_embeds_to_restore = <span class="hljs-built_in">sum</span>(<br>                                preempted_req.get_num_encoder_embeds(i)<br>                                <span class="hljs-keyword">for</span> i <span class="hljs-keyword">in</span> preempted_encoder_inputs<br>                            )<br>                            encoder_compute_budget += num_embeds_to_restore<br>                        req_index -= <span class="hljs-number">1</span><br>                <span class="hljs-keyword">else</span>:<br>                    preempted_req = <span class="hljs-variable language_">self</span>.running.pop()<br><br>                <span class="hljs-variable language_">self</span>._preempt_request(preempted_req, scheduled_timestamp)<br>                preempted_reqs.append(preempted_req)<br>                <span class="hljs-keyword">if</span> preempted_req == request:<br>                    <span class="hljs-comment"># No more request to preempt. Cannot schedule this request.</span><br>                    <span class="hljs-keyword">break</span><br><br>        <span class="hljs-keyword">if</span> new_blocks <span class="hljs-keyword">is</span> <span class="hljs-literal">None</span>:<br>            <span class="hljs-comment"># Cannot schedule this request.</span><br>            <span class="hljs-keyword">break</span><br><br>        <span class="hljs-comment"># Schedule the request.</span><br>        scheduled_running_reqs.append(request)<br>        request_id = request.request_id<br>        req_to_new_blocks[request_id] = new_blocks<br>        num_scheduled_tokens[request_id] = num_new_tokens<br>        token_budget -= num_new_tokens<br>        req_index += <span class="hljs-number">1</span><br><br>        <span class="hljs-comment"># Speculative decode related.</span><br>        <span class="hljs-keyword">if</span> request.spec_token_ids:<br>            num_scheduled_spec_tokens = (<br>                num_new_tokens<br>                + request.num_computed_tokens<br>                - request.num_tokens<br>                - request.num_output_placeholders<br>            )<br>            <span class="hljs-keyword">if</span> num_scheduled_spec_tokens &gt; <span class="hljs-number">0</span>:<br>                spec_token_ids = request.spec_token_ids<br>                <span class="hljs-keyword">if</span> <span class="hljs-built_in">len</span>(spec_token_ids) &gt; num_scheduled_spec_tokens:<br>                    spec_token_ids = spec_token_ids[:num_scheduled_spec_tokens]<br>                scheduled_spec_decode_tokens[request.request_id] = spec_token_ids<br><br>            <span class="hljs-comment"># New spec tokens will be set in `update_draft_token_ids` before the</span><br>            <span class="hljs-comment"># next step when applicable.</span><br>            request.spec_token_ids = []<br><br>        <span class="hljs-comment"># Encoder-related.</span><br>        <span class="hljs-keyword">if</span> encoder_inputs_to_schedule:<br>            scheduled_encoder_inputs[request_id] = encoder_inputs_to_schedule<br>            <span class="hljs-comment"># Allocate the encoder cache.</span><br>            <span class="hljs-keyword">for</span> i <span class="hljs-keyword">in</span> encoder_inputs_to_schedule:<br>                <span class="hljs-variable language_">self</span>.encoder_cache_manager.allocate(request, i)<br>                <span class="hljs-keyword">if</span> <span class="hljs-variable language_">self</span>.ec_connector <span class="hljs-keyword">is</span> <span class="hljs-keyword">not</span> <span class="hljs-literal">None</span>:<br>                    <span class="hljs-variable language_">self</span>.ec_connector.update_state_after_alloc(request, i)<br>            encoder_compute_budget = new_encoder_compute_budget<br>        <span class="hljs-keyword">if</span> external_load_encoder_input:<br>            <span class="hljs-keyword">for</span> i <span class="hljs-keyword">in</span> external_load_encoder_input:<br>                <span class="hljs-variable language_">self</span>.encoder_cache_manager.allocate(request, i)<br>                <span class="hljs-keyword">if</span> <span class="hljs-variable language_">self</span>.ec_connector <span class="hljs-keyword">is</span> <span class="hljs-keyword">not</span> <span class="hljs-literal">None</span>:<br>                    <span class="hljs-variable language_">self</span>.ec_connector.update_state_after_alloc(request, i)<br><br></code></pre></td></tr></table></figure>
 
-<p>在异步调度中，为了防止浪费GPU资源，采用的方式为GPU正在计算<code>request_1</code>同时不断接受<code>request_2</code>…，因此我们需要一个<code>output_placeholder</code>来预留一个<em>还没有完成的request</em>的输出，所以下边的这一段条件判断,指的是<code>已经计算的token数 + output_placeholder &gt;= 用户指定的最大token数</code>。<br><img src="/2026/06/02/2_vllm%E7%9A%84scheduler/num_computed_tokens.png" srcset="/img/loading.gif" lazyload></p>
+<p>在异步调度中，为了防止浪费GPU资源，采用的方式为GPU正在计算<code>request_1</code>同时不断接受<code>request_2</code>…，因此我们需要一个<code>output_placeholder</code>来预留一个<em>还没有完成的request</em>的输出，所以下边的这一段条件判断,指的是<code>已经计算的token数 + output_placeholder &gt;= 用户指定的最大token数</code>。<br><img src="/2026/06/01/2_vllm%E7%9A%84scheduler/num_computed_tokens.png" srcset="/img/loading.gif" lazyload></p>
 <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><code class="hljs python"><span class="hljs-keyword">if</span> (<br>    request.num_output_placeholders &gt; <span class="hljs-number">0</span><br>    <span class="hljs-keyword">and</span> (num_computed_tokens + <span class="hljs-number">1</span>) - (num_output_placeholders - <span class="hljs-number">1</span>)<br>    &gt;= request.num_prompt_tokens + request.max_tokens<br>    ):<br></code></pre></td></tr></table></figure>
 <blockquote>
 <ol>
@@ -317,7 +318,7 @@
 <li>收到这一次request：在这一步假设再调度一次，至少会生成一个token -&gt; num_computed_tokens + 1</li>
 </ol>
 </blockquote>
-<p>紧接着，schedule会尝试为到来的请求分配KVCache，如果成功分配了，直接调度该请求，如果失败了那么会尝试踢出正在运行的请求，整个踢出的流程图大致如下：<br><img src="/2026/06/02/2_vllm%E7%9A%84scheduler/process_requests.png" srcset="/img/loading.gif" lazyload></p>
+<p>紧接着，schedule会尝试为到来的请求分配KVCache，如果成功分配了，直接调度该请求，如果失败了那么会尝试踢出正在运行的请求，整个踢出的流程图大致如下：<br><img src="/2026/06/01/2_vllm%E7%9A%84scheduler/process_requests.png" srcset="/img/loading.gif" lazyload></p>
 <p>接着scheduler会尝试调度waiting队列的请求（如果本轮没有发生抢占）。</p>
 <blockquote>
 <p>如果发生了抢占，那么其实说明先前分配KV Cache的时候发现了空间不足的情况，因此这里不会进入到Waiting队列的调度。</p>
@@ -336,7 +337,7 @@
 <blockquote>
 <p>Prefix_Cache 在多个GPU Worker执行推理时是这样运行(TP)</p>
 </blockquote>
-<p><img src="/2026/06/02/2_vllm%E7%9A%84scheduler/prefix_cache.png" srcset="/img/loading.gif" lazyload></p>
+<p><img src="/2026/06/01/2_vllm%E7%9A%84scheduler/prefix_cache.png" srcset="/img/loading.gif" lazyload></p>
 <p><strong>Issue： 2026&#x2F;4&#x2F;17</strong></p>
 <p>这个issue:<a target="_blank" rel="noopener" href="https://github.com/vllm-project/vllm/issues/40004%E6%8F%90%E5%87%BA%E7%9B%AE%E5%89%8D%E7%9A%84scheduler%E5%8F%AA%E6%9C%89%E5%9C%A8KV">https://github.com/vllm-project/vllm/issues/40004提出目前的scheduler只有在KV</a> Cache Block无法分配的时候才会尝试从running队列中踢出优先级比较低的request，但是如果当前的running队列达到了max_seqs_len，高优先级的任务只能在waiting队列中等待。<br>不过已经有pr了：<br><a target="_blank" rel="noopener" href="https://github.com/vllm-project/vllm/pull/40087%EF%BC%8C%E5%90%8E%E7%BB%AD%E7%9C%8B%E7%9C%8B%E8%BF%99%E4%B8%AA%E4%BC%9A%E4%B8%8D%E4%BC%9A%E8%A2%AB%E5%90%88%E5%85%A5">https://github.com/vllm-project/vllm/pull/40087，后续看看这个会不会被合入</a></p>
 <blockquote>
@@ -353,6 +354,13 @@
               <div class="post-metas my-3">
   
   
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/vllm/" class="print-no-link">#vllm</a>
+      
+    </div>
+  
 </div>
 
 
@@ -361,8 +369,8 @@
 
   <div class="license-box my-3">
     <div class="license-title">
-      <div></div>
-      <div>http://example.com/2026/06/02/2_vllm的scheduler/</div>
+      <div>vllm的scheduler</div>
+      <div>http://example.com/2026/06/01/2_vllm的scheduler/</div>
     </div>
     <div class="license-meta">
       
@@ -374,7 +382,7 @@
       
         <div class="license-meta-item license-meta-date">
           <div>发布于</div>
-          <div>2026年6月2日</div>
+          <div>2026年6月1日</div>
         </div>
       
       
@@ -406,9 +414,9 @@
                   <article class="post-prev col-6">
                     
                     
-                      <a href="/2026/06/02/4_vllm%E7%9A%84kv_cahce_manager/" title="">
+                      <a href="/2026/06/01/4_vllm%E7%9A%84kv_cahce_manager/" title="vllm的kv_cache_manager">
                         <i class="iconfont icon-arrowleft"></i>
-                        <span class="hidden-mobile"></span>
+                        <span class="hidden-mobile">vllm的kv_cache_manager</span>
                         <span class="visible-mobile">上一篇</span>
                       </a>
                     
@@ -416,8 +424,8 @@
                   <article class="post-next col-6">
                     
                     
-                      <a href="/2026/01/22/hg-store-node-note/" title="hg-store-node-note">
-                        <span class="hidden-mobile">hg-store-node-note</span>
+                      <a href="/2026/06/01/FA2%E4%B8%8EFlash_Decoding/" title="FA2与Flash Decoding">
+                        <span class="hidden-mobile">FA2与Flash Decoding</span>
                         <span class="visible-mobile">下一篇</span>
                         <i class="iconfont icon-arrowright"></i>
                       </a>

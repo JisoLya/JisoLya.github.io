@@ -19,21 +19,24 @@
   <meta name="author" content="Soya">
   <meta name="keywords" content="">
   
-    <meta name="description" content="vllm的kv_cache_manager allocate_slots()在先前的schedule()中执行请求的踢出&#x2F;加入前，kv_cache_manager首先根据request的new_tokens信息尝试分配新的显存block，本节主要看一下这个kv_cache_manager都做了什么事情。 12345new_blocks &#x3D; self.kv_cache_manager.al">
+    <meta name="description" content="vllm的model_executor经过前面scheduler一部分代码的解读，了解到scheduler会对当前的batch_requests打包成一整个SchedulerOutput传递给Engine中的ModelExecutor，本节我们继续沿着EngineCore中的step()方法进入模型推理阶段。 1future &#x3D; self.model_executor.execute_model(">
 <meta property="og:type" content="article">
-<meta property="og:title" content="Welcome to my blog!">
-<meta property="og:url" content="http://example.com/2026/06/02/4_vllm%E7%9A%84kv_cahce_manager/index.html">
+<meta property="og:title" content="vllm的model_executor">
+<meta property="og:url" content="http://example.com/2026/06/01/3_vllm%E7%9A%84model_executor/index.html">
 <meta property="og:site_name" content="Welcome to my blog!">
-<meta property="og:description" content="vllm的kv_cache_manager allocate_slots()在先前的schedule()中执行请求的踢出&#x2F;加入前，kv_cache_manager首先根据request的new_tokens信息尝试分配新的显存block，本节主要看一下这个kv_cache_manager都做了什么事情。 12345new_blocks &#x3D; self.kv_cache_manager.al">
+<meta property="og:description" content="vllm的model_executor经过前面scheduler一部分代码的解读，了解到scheduler会对当前的batch_requests打包成一整个SchedulerOutput传递给Engine中的ModelExecutor，本节我们继续沿着EngineCore中的step()方法进入模型推理阶段。 1future &#x3D; self.model_executor.execute_model(">
 <meta property="og:locale" content="zh_CN">
-<meta property="article:published_time" content="2026-06-02T10:42:27.010Z">
-<meta property="article:modified_time" content="2026-05-01T17:29:44.970Z">
+<meta property="og:image" content="http://example.com/2026/06/01/3_vllm%E7%9A%84model_executor/pp.png">
+<meta property="article:published_time" content="2026-06-01T12:51:10.000Z">
+<meta property="article:modified_time" content="2026-06-02T10:55:36.615Z">
 <meta property="article:author" content="Soya">
+<meta property="article:tag" content="vllm">
 <meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="http://example.com/2026/06/01/3_vllm%E7%9A%84model_executor/pp.png">
   
   
   
-  <title>Welcome to my blog!</title>
+  <title>vllm的model_executor - Welcome to my blog!</title>
 
   <link  rel="stylesheet" href="https://lib.baomitu.com/twitter-bootstrap/4.6.1/css/bootstrap.min.css" />
 
@@ -212,7 +215,7 @@
       <div class="banner-text text-center fade-in-up">
         <div class="h2">
           
-            <span id="subtitle" data-typed-text=""></span>
+            <span id="subtitle" data-typed-text="vllm的model_executor"></span>
           
         </div>
 
@@ -223,8 +226,8 @@
     
       <span class="post-meta">
         <i class="iconfont icon-date-fill" aria-hidden="true"></i>
-        <time datetime="2026-06-02 18:42" pubdate>
-          2026年6月2日 晚上
+        <time datetime="2026-06-01 20:51" pubdate>
+          2026年6月1日 晚上
         </time>
       </span>
     
@@ -235,7 +238,7 @@
       <span class="post-meta mr-2">
         <i class="iconfont icon-chart"></i>
         
-          945 字
+          291 字
         
       </span>
     
@@ -246,7 +249,7 @@
         
         
         
-          8 分钟
+          3 分钟
         
       </span>
     
@@ -292,52 +295,19 @@
       <div class="container nopadding-x-md" id="board-ctn">
         <div id="board">
           <article class="post-content mx-auto">
-            <h1 id="seo-header"></h1>
+            <h1 id="seo-header">vllm的model_executor</h1>
             
             
               <div class="markdown-body">
                 
-                <h1 id="vllm的kv-cache-manager-allocate-slots"><a href="#vllm的kv-cache-manager-allocate-slots" class="headerlink" title="vllm的kv_cache_manager allocate_slots()"></a>vllm的kv_cache_manager allocate_slots()</h1><p>在先前的schedule()中执行请求的踢出&#x2F;加入前，<code>kv_cache_manager</code>首先根据request的new_tokens信息尝试分配新的显存block，本节主要看一下这个kv_cache_manager都做了什么事情。</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><code class="hljs python">new_blocks = <span class="hljs-variable language_">self</span>.kv_cache_manager.allocate_slots(<br>                request,<br>                num_new_tokens,<br>                num_lookahead_tokens=<span class="hljs-variable language_">self</span>.num_lookahead_tokens,<br>                )<br></code></pre></td></tr></table></figure>
-<p>进入到这个方法内，方法里有一大段注释解释了Block的的分布，其中有一个<code>number_external_cache</code>，这个是在P&#x2F;D(Prefill&#x2F;Decode)架构下才会有的，这里涉及到跨实例的KV Cache传输，这里先有一个概念即可。</p>
-<figure class="highlight asciidoc"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><code class="hljs asciidoc"><span class="hljs-section">```</span><br><span class="hljs-section">----------------------------------------------------------------------</span><br><span class="hljs-section">| &lt; comp &gt; | &lt; new_comp &gt; | &lt; ext_comp &gt;  | &lt; new &gt;  | &lt; lookahead &gt; |</span><br><span class="hljs-section">----------------------------------------------------------------------</span><br><span class="hljs-section">                                          |   &lt; to be computed &gt;     |</span><br><span class="hljs-section">----------------------------------------------------------------------</span><br><span class="hljs-section">                          |            &lt; to be allocated &gt;           |</span><br><span class="hljs-section">----------------------------------------------------------------------</span><br><span class="hljs-code">                          | &lt; to be cached (roughly, |</span><br><span class="hljs-section">                          | details below)&gt;          |</span><br><span class="hljs-section">----------------------------------------------------------------------</span><br>| Prefix-cached tokens from either vLLM   |<br>| or connector. Can be safely removed if  |<br><span class="hljs-section">| they are outside sliding window.        |</span><br><span class="hljs-section">----------------------------------------------------------------------</span><br>|   &lt; cached by vLLM &gt;    | not cached by |<br><span class="hljs-code">                          | vLLM, but     |</span><br>| ref_cnt  | ref_cnt not  | cached by     |<br><span class="hljs-section">| increased| increased yet| connector     |</span><br><span class="hljs-section">----------------------------------------------------------------------</span><br></code></pre></td></tr></table></figure>
+                <h1 id="vllm的model-executor"><a href="#vllm的model-executor" class="headerlink" title="vllm的model_executor"></a>vllm的model_executor</h1><p>经过前面scheduler一部分代码的解读，了解到scheduler会对当前的batch_requests打包成一整个<code>SchedulerOutput</code>传递给<code>Engine</code>中的<code>ModelExecutor</code>，本节我们继续沿着<code>EngineCore</code>中的<code>step()</code>方法进入模型推理阶段。</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><code class="hljs python">future = <span class="hljs-variable language_">self</span>.model_executor.execute_model(scheduler_output, non_block=<span class="hljs-literal">True</span>)<br></code></pre></td></tr></table></figure>
 
-<pre><code class="hljs">    Abbrivations:
-
-    <figure class="highlight makefile"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><code class="hljs makefile">comp      = request.num_computed_tokens<br>new_comp  = num_new_computed_tokens<br>          = len(new_computed_blocks) * block_size<br>ext_comp  = num_external_computed_tokens, cached by the connector<br>new       = num_new_tokens, including unverified draft tokens<br>lookahead = num_lookahead_tokens<br></code></pre></td></tr></table></figure>
-</code></pre>
-<figure class="highlight autohotkey"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><code class="hljs autohotkey"><span class="hljs-title">紧接着方法内部计算了本地缓存的已经缓存的tokens:</span>`num_local_computed_tokens`,这个由两部分构成，一是num_computed_tokens, 第二个是num_new_computed_tokens。<br>&gt;num_new_computed_tokens是什么东西？<br><br>分析一下外部scheduler对这个方法的调用，发现有下边四种情况：<br><br><span class="hljs-number">1</span>. 处理Running request<br>    <br>    这种情况下传入的参数为默认值就是<span class="hljs-number">0</span>(所有的token都已经在prefix cache里了)<br><span class="hljs-number">2</span>. 处理Waiting request(新请求/先前被踢出的请求)<br><br>    在外部有这样的一段调用, if判断说明了这里是在处理新的请求或者曾经被踢出的请求，由于block的清空策略是lazy的，所以即使这个请求被踢出了，他的KV Cache 可能还存在于物理内存中，所以需要先计算一下曾经cache的tokens。<br>    ```python<br><span class="hljs-title">    if request.num_computed_tokens == 0:</span><br>                    # Get locally-cached tokens.<br><span class="hljs-built_in">                    new_computed_blocks,</span> num_new_local_computed_tokens = (<br>                        self.kv_cache_manager.get_computed_blocks(request)<br>                    )<br></code></pre></td></tr></table></figure>
-<ol start="3">
-<li>prefix cache未命中或者是enable_prefix_cache&#x3D;&#x3D;False<br> 这种情况下很显然new_computed_tokens和num_computed_tokens都是0</li>
-<li>PD分离情况 <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><code class="hljs python"><span class="hljs-keyword">else</span>: <span class="hljs-comment"># 对应2中的if</span><br>    new_computed_blocks = <span class="hljs-variable language_">self</span>.kv_cache_manager.empty_kv_cache_blocks<br>    num_new_local_computed_tokens = <span class="hljs-number">0</span><br>    num_computed_tokens = request.num_computed_tokens<br></code></pre></td></tr></table></figure></li>
-</ol>
-<blockquote>
-<p>思考：现在的PD分离流程似乎是这样的</p>
-<ol>
-<li>请求 → Prefill 实例（max_tokens&#x3D;1，只做 prefill）  </li>
-<li>Prefill 完成 → 返回 KV 元数据（block 地址等）  </li>
-<li>请求 + KV 元数据 → Decode 实例  </li>
-<li>Decode 分配 block，接收 KV 传输  </li>
-<li>开始 decode</li>
-</ol>
-<p>总延迟 &#x3D; prefill + 分配blcok + kv传输 + decode</p>
-<p>这样的优化方式是否有可行之处？</p>
-<ol>
-<li>请求同时发给 Prefill 和 Decode  </li>
-<li>Decode 立即分配 block 占位（很快）  </li>
-<li>Prefill 同时计算 KV  </li>
-<li>Prefill 完成后直接传输到 Decode 预分配的 block  </li>
-<li>开始 decode</li>
-</ol>
-<p>  总延迟 &#x3D; max(prefill, 分配block) + kv传输 + decode</p>
-<p>难点： 需要令prefill实例预先知道目标decode实例&#x2F;block_id（这个需要先完成blcok分配才可以获取），需要中心化的调度器</p>
-</blockquote>
-<p>回到代码中，这里其他的几个变量就见名知意了，下边有一条<code>remove_skipped_blocks</code>，这个是有的模型支持的是slide-window-attn，所以窗口外的cache就可以remove了，不过大部分应该都是full-attention。</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><code class="hljs python">num_local_computed_tokens = (<br>    request.num_computed_tokens + num_new_computed_tokens<br>)<br>total_computed_tokens = <span class="hljs-built_in">min</span>(<br>    num_local_computed_tokens + num_external_computed_tokens,<br>    <span class="hljs-variable language_">self</span>.max_model_len,<br>)<br>num_tokens_main_model = total_computed_tokens + num_new_tokens<br>num_tokens_need_slot = <span class="hljs-built_in">min</span>(<br>    num_tokens_main_model + num_lookahead_tokens,<br>    <span class="hljs-variable language_">self</span>.max_model_len,<br>)<br><br><span class="hljs-variable language_">self</span>.coordinator.remove_skipped_blocks(<br>    request.request_id, total_computed_tokens<br>)<br></code></pre></td></tr></table></figure>
-<p>下边就是根据先前计算的数据来创建并分配block对象了：</p>
-<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br></pre></td><td class="code"><pre><code class="hljs python"><span class="hljs-keyword">if</span> (<br>    new_computed_block_list <span class="hljs-keyword">is</span> <span class="hljs-keyword">not</span> <span class="hljs-variable language_">self</span>.empty_kv_cache_blocks.blocks<br>    <span class="hljs-keyword">or</span> num_external_computed_tokens &gt; <span class="hljs-number">0</span><br>):<br>    <span class="hljs-comment"># Append the new computed blocks to the request blocks until now to</span><br>    <span class="hljs-comment"># avoid the case where the new blocks cannot be allocated.</span><br>    <span class="hljs-variable language_">self</span>.coordinator.allocate_new_computed_blocks(<br>        request_id=request.request_id,<br>        new_computed_blocks=new_computed_block_list,<br>        num_local_computed_tokens=num_local_computed_tokens,<br>        num_external_computed_tokens=num_external_computed_tokens,<br>    )<br><br>new_blocks = <span class="hljs-variable language_">self</span>.coordinator.allocate_new_blocks(<br>    request.request_id,<br>    num_tokens_need_slot,<br>    num_tokens_main_model,<br>    num_encoder_tokens,<br>)<br><br><span class="hljs-comment"># P/D: 先分配并提前返回，kv接收完成之后再填入真实的数据</span><br><span class="hljs-keyword">if</span> <span class="hljs-keyword">not</span> <span class="hljs-variable language_">self</span>.enable_caching <span class="hljs-keyword">or</span> delay_cache_blocks:<br>    <span class="hljs-keyword">return</span> <span class="hljs-variable language_">self</span>.create_kv_cache_blocks(new_blocks)<br><span class="hljs-comment"># 由于投机采样的存在，我们需要缓存的是‘真正’需要缓存的部分，因为投机采样的token有可能被reject</span><br>num_tokens_to_cache = <span class="hljs-built_in">min</span>(<br>    total_computed_tokens + num_new_tokens,<br>    request.num_tokens,<br>)<br><span class="hljs-variable language_">self</span>.coordinator.cache_blocks(request, num_tokens_to_cache)<br><br><span class="hljs-keyword">return</span> <span class="hljs-variable language_">self</span>.create_kv_cache_blocks(new_blocks)<br></code></pre></td></tr></table></figure>
-<p>来自deepwiki的时序逻辑，具体的connector后续再开一坑</p>
-<figure class="highlight mipsasm"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><code class="hljs mipsasm">Step N：  <br>  allocate_slots(delay_cache_blocks=True)  <br>    → 分配 <span class="hljs-keyword">block </span>占位，不 <span class="hljs-keyword">cache </span> <br>  connector.update_state_after_alloc()  <br>    → 告诉 connector <span class="hljs-string">&quot;把 KV 写到这些 block ID&quot;</span>  <br>  request.status = <span class="hljs-keyword">WAITING_FOR_REMOTE_KVS </span> <br>  <br>  [后台：connector 后台线程接收 KV 数据，写入 <span class="hljs-keyword">block] </span> <br>  <br>Step N+M（某次调度开始时）：  <br>  connector 报告传输完成  <br>    → finished_recving_kv_req_ids.<span class="hljs-keyword">add(request_id) </span> <br>  _update_waiting_for_remote_kv(request)  <br>    → kv_cache_manager.<span class="hljs-keyword">cache_blocks() </span>  ← 这里才真正 <span class="hljs-keyword">cache </span> <br>    → request.status = <span class="hljs-keyword">WAITING </span> <br>  <br>Step N+M+<span class="hljs-number">1</span>：  <br>  request 重新进入 <span class="hljs-keyword">waiting </span>队列调度  <br>  num_computed_tokens &gt; <span class="hljs-number">0</span>，跳过 get_computed_blocks()  <br>  正常分配剩余 <span class="hljs-keyword">block，进入 </span>running 队列开始 decode  <br></code></pre></td></tr></table></figure>
+<h2 id="1-ModelExecutor"><a href="#1-ModelExecutor" class="headerlink" title="1. ModelExecutor"></a>1. ModelExecutor</h2><p>直接进到<code>execute_model()</code>,直接调用了一个RPC来启动模型推理。</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><code class="hljs python"><span class="hljs-keyword">def</span> <span class="hljs-title function_">execute_model</span>(<span class="hljs-params"></span><br><span class="hljs-params">    self, scheduler_output: SchedulerOutput, non_block: <span class="hljs-built_in">bool</span> = <span class="hljs-literal">False</span></span><br><span class="hljs-params"></span>) -&gt; ModelRunnerOutput | <span class="hljs-literal">None</span> | Future[ModelRunnerOutput | <span class="hljs-literal">None</span>]:<br>    output = <span class="hljs-variable language_">self</span>.collective_rpc(  <span class="hljs-comment"># type: ignore[call-overload]</span><br>        <span class="hljs-string">&quot;execute_model&quot;</span>, args=(scheduler_output,), non_block=non_block<br>    )<br>    <span class="hljs-keyword">return</span> output[<span class="hljs-number">0</span>]<br><br>---<br>接着搜索下execute_model()调用链是这样的<br><br>Executor.execute_model  <br>  └─ collective_rpc(<span class="hljs-string">&quot;execute_model&quot;</span>, args=(scheduler_output,))  <br>       └─ [UniProcExecutor] run_method(driver_worker, <span class="hljs-string">&quot;execute_model&quot;</span>, ...)  <br>       └─ [MultiprocExecutor] 通过 IPC 消息队列发送给 WorkerProc  <br>            └─ Worker.execute_model(scheduler_output)  <br>                 └─ <span class="hljs-variable language_">self</span>.model_runner.execute_model(scheduler_output, intermediate_tensors)  <br>                      └─ GPUModelRunner.execute_model(...)  <br></code></pre></td></tr></table></figure>
+<p>在<code>Wroker.execute_model</code>中，对于PP(PiplineParallel)做了一些条件判断，这个图简单的解释了以下PP的工作原理(每一个方框代表了一个GPU Worker)：<br><img src="/2026/06/01/3_vllm%E7%9A%84model_executor/pp.png" srcset="/img/loading.gif" lazyload><br>由于在PP中模型的推理具有先后的依赖关系，所以在每一层都需要等待前一循环的Tensor发送完成才可以，从代码中也可以验证这个设计：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><code class="hljs python"><span class="hljs-keyword">if</span> <span class="hljs-variable language_">self</span>._pp_send_work:<br>    <span class="hljs-keyword">for</span> handle <span class="hljs-keyword">in</span> <span class="hljs-variable language_">self</span>._pp_send_work:<br>        handle.wait()<br>    <span class="hljs-variable language_">self</span>._pp_send_work = []<br></code></pre></td></tr></table></figure>
+<p>当前一轮的发送任务完成了之后，才会执行本轮的任务。</p>
 
                 
               </div>
@@ -347,6 +317,13 @@
               <div class="post-metas my-3">
   
   
+    <div class="post-meta">
+      <i class="iconfont icon-tags"></i>
+      
+        <a href="/tags/vllm/" class="print-no-link">#vllm</a>
+      
+    </div>
+  
 </div>
 
 
@@ -355,8 +332,8 @@
 
   <div class="license-box my-3">
     <div class="license-title">
-      <div></div>
-      <div>http://example.com/2026/06/02/4_vllm的kv_cahce_manager/</div>
+      <div>vllm的model_executor</div>
+      <div>http://example.com/2026/06/01/3_vllm的model_executor/</div>
     </div>
     <div class="license-meta">
       
@@ -368,7 +345,7 @@
       
         <div class="license-meta-item license-meta-date">
           <div>发布于</div>
-          <div>2026年6月2日</div>
+          <div>2026年6月1日</div>
         </div>
       
       
@@ -400,9 +377,9 @@
                   <article class="post-prev col-6">
                     
                     
-                      <a href="/2026/06/02/5_vllm%E9%A1%B9%E7%9B%AEGDN_forward/" title="">
+                      <a href="/2026/06/01/1_vllm%E5%90%AF%E5%8A%A8%E6%B5%81%E7%A8%8B/" title="vllm的启动流程">
                         <i class="iconfont icon-arrowleft"></i>
-                        <span class="hidden-mobile"></span>
+                        <span class="hidden-mobile">vllm的启动流程</span>
                         <span class="visible-mobile">上一篇</span>
                       </a>
                     
@@ -410,8 +387,8 @@
                   <article class="post-next col-6">
                     
                     
-                      <a href="/2026/06/02/2_vllm%E7%9A%84scheduler/" title="">
-                        <span class="hidden-mobile"></span>
+                      <a href="/2026/01/22/hg-store-node-note/" title="hg-store-node-note">
+                        <span class="hidden-mobile">hg-store-node-note</span>
                         <span class="visible-mobile">下一篇</span>
                         <i class="iconfont icon-arrowright"></i>
                       </a>
